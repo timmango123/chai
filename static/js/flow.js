@@ -216,6 +216,34 @@ window.AnlaFlow = (() => {
     box.appendChild(card);
   }
 
+  // The note is shown inside the panel: the panel covers the whole screen, so a note added to the chat behind it
+  // looked like the button did nothing (2026-10-31 user report).
+  async function showNote(box) {
+    box.replaceChildren(el("p", "正在幫你整理…", "urgent-action-title"));
+    const {ok, data} = await post("/api/generate-draft", {target: "輔導老師"}).catch(() => ({ok: false, data: {}}));
+    if (!ok || !data.draft) {
+      box.replaceChildren(el("p", data.error || "小卡暫時無法產生；需要時可以直接撥 1925。"));
+      return;
+    }
+    box.replaceChildren(el("p", "這是可以拿給學校輔導老師的求助小卡，可以先改成你自己的話（還沒有寄出）：", "urgent-action-title"));
+    const area = el("textarea", "", "choice-text");
+    area.rows = 6;
+    area.value = data.draft;
+    area.setAttribute("aria-label", "給輔導老師的求助小卡");
+    const copy = chip("複製小卡", async () => {
+      try {
+        await navigator.clipboard.writeText(area.value);
+        copy.textContent = "已複製";
+      } catch (_) {
+        area.focus();
+        area.select();
+      }
+    });
+    box.append(area, copy,
+               el("p", "要不要給、給誰都由你決定。如果現在有立即危險，請先撥 119 或 1925，不用等小卡。", "school-referral-hint"));
+    area.focus();
+  }
+
   function urgentActions() {
     const host = byId("urgentActions");
     if (!host || host.childElementCount) return;
@@ -228,7 +256,7 @@ window.AnlaFlow = (() => {
       input.value = "我現在是安全的，只是需要有人陪我聊聊";
       sendMessage();
     }, "urgent-action"));
-    buttons.appendChild(chip("📝 幫我整理狀況", () => window.AnlaNextSteps?.openNote(true), "urgent-action"));
+    buttons.appendChild(chip("📝 幫我整理狀況", () => showNote(box), "urgent-action"));
     buttons.appendChild(chip("🙋 找真人聊聊", () => showFindPerson(box), "urgent-action"));
     host.append(buttons, box);
   }

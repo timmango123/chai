@@ -121,5 +121,5 @@ class PageElementTests(RouteBase):
             self.assertIn(marker, page)
         script = (ROOT / "static" / "js" / "flow.js").read_text(encoding="utf-8")
         for marker in ("你好嗎？今天心情如何？", "我需要幫助", "我很安全", "幫我整理狀況", "找真人聊聊",
-                       "https://page.line.me/093wgvxu", "049-2202662"):
+                       "https://page.line.me/093wgvxu", "049-2202662", "給學校輔導老師的求助小卡", "showNote(box)"):
             self.assertIn(marker, script)
