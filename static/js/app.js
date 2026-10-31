@@ -308,6 +308,7 @@ async function sendMessage() {
   }
 
   appendMessage("user", text);
+  window.AnlaFlow?.removeMoodPicker();
   input.value = "";
   conversationHistory.push({ role: "user", text: text });
 
@@ -350,6 +351,7 @@ async function sendMessage() {
     }
     window.AnlaNextSteps.update(data);
     if (replyBubble) window.AnlaNextSteps.suggestInReply(replyBubble, data.support_offer);
+    if (replyBubble && data.offer_chat_checkin) window.AnlaFlow?.offerCheck(replyBubble);
     try {  // the counseling-office card must never turn a delivered reply into a send error
       window.AnlaSchoolReferral.setAvailable(data.school_referral_available);
       window.AnlaSchoolReferral.show(data.school_referral);

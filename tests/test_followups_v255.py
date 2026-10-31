@@ -53,7 +53,7 @@ class StudentReplyTests(unittest.TestCase):
 
     def test_privacy_questions_get_answers(self):
         for message, expected in (("你會跟我爸媽講嗎", "不會通知你的家人"), ("這個有錄下來嗎", "24 小時"),
-                                  ("可以刪掉我的紀錄嗎", "沒有手動刪除"), ("那我關掉網頁就沒了嗎", "24 小時")):
+                                  ("可以刪掉我的紀錄嗎", "開始新對話"), ("那我關掉網頁就沒了嗎", "24 小時")):
             with self.subTest(message=message):
                 level, state, reply = converse([message])[0]
                 self.assertEqual(state["current_goal"], "establish_safety")

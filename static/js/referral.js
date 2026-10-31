@@ -237,6 +237,19 @@
       setBusy(false);
     }
   }
+  // Red state 「幫我整理狀況」: only the editable note, leaving the urgent and referral panels as they are.
+  async function noteOnly(bubble) {
+    try {
+      const data = await post("/api/generate-draft", {target: "輔導老師"});
+      const box = node("div", "");
+      bubble.appendChild(box);
+      box.appendChild(node("p", "可以先改成你自己的話，要不要傳、傳給誰都由你決定（還沒有寄出）。"));
+      textBox(box, data.draft, "字條");
+      keepReplyInView(bubble);
+    } catch (error) {
+      bubble.appendChild(node("p", error.message || "字條暫時無法產生；需要時可以直接撥 1925。"));
+    }
+  }
   function showTeacherNote(bubble, data) {
     if (data.next_steps) current = data.next_steps;
     byId("nextStepChoices")?.remove();
@@ -426,15 +439,21 @@
     },
     // Header 「寫求助字條」: make the note directly instead of sending a chat message that the AI answered with
     // its own draft plus an offer of another one (2026-10-23 live test).
-    openNote() {
-      if (current?.consent_kind === "referral") {
+    // force: the red-state 「幫我整理狀況」 button makes the note even while the referral options are open.
+    openNote(force = false) {
+      if (current?.consent_kind === "referral" && !force) {
         render(current, true);
         return;
       }
       const bubble = appendMessage("ai", "好，幫你寫了一張給輔導老師的字條：");
+      if (force) {
+        noteOnly(bubble);
+        return;
+      }
       teacherNote(bubble).then(() => keepReplyInView(bubble));
     },
     update(data) {
+      if (data.show_protection_line && byId("urgent113")) byId("urgent113").hidden = false;
       if (data.safety_alert) safetyNotice(data.safety_alert);
       if (data.show_urgent_help) showUrgentHelp();
       if (data.next_steps) render(data.next_steps);

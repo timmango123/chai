@@ -935,3 +935,38 @@ body.has-urgent-help { padding-top: var(--urgent-help-height, 125px); }
   .transcript-row, .explain-domain, .reporting-checklist, .print-header { break-inside: avoid; }
   h3 { break-after: avoid; }
 }
+
+/* 2026-10-31 流程圖：開場心情、對話中的檢核、紅燈四個按鈕、一鍵隱藏小遊戲。 */
+.mood-picker { margin-top: .6rem; }
+.mood-question { font-weight: 600; margin-bottom: .4rem; }
+.mood-row { display: flex; flex-wrap: wrap; gap: .4rem; }
+.mood-chip { border: 1px solid #d6c4b5; background: #fff; border-radius: 999px; padding: .35rem .7rem; font: inherit; cursor: pointer; }
+.mood-chip:hover, .mood-chip:focus-visible { background: #fff4e8; outline: 2px solid #e8a77a; }
+.chat-check-chips { margin-top: .5rem; }
+.chip-quiet { opacity: .75; }
+.chat-check-note { margin: .5rem 0 .3rem; font-size: .9rem; }
+.urgent-help .urgent-primary strong::before { content: "⚠️ "; }
+.urgent-action-buttons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; margin: .75rem 0; }
+.urgent-action { padding: .65rem .5rem; border-radius: 12px; border: 2px solid #dc2626; background: #fff; color: #991b1b;
+  font: inherit; font-weight: 700; cursor: pointer; }
+.urgent-action:hover, .urgent-action:focus-visible { background: #fef2f2; }
+.urgent-action-box { line-height: 1.7; }
+.urgent-action-title { font-weight: 700; margin: .5rem 0 .25rem; }
+.urgent-action-phones { display: flex; flex-wrap: wrap; gap: .4rem; }
+.urgent-action-phones .btn-hotline { flex: 1 1 10rem; }
+.urgent-action-list { padding-left: 1.2rem; margin: .25rem 0; }
+.urgent-booking { margin-top: .6rem; padding: .6rem .8rem; border-radius: 10px; background: #f8fafc; border: 1px solid #cbd5e1; }
+.puzzle-overlay { position: fixed; inset: 0; z-index: 100000; display: flex; align-items: center; justify-content: center;
+  background: #eef6ff; }
+.puzzle-overlay[hidden] { display: none; }
+.puzzle-card { background: #fff; border-radius: 18px; padding: 1.5rem; box-shadow: 0 10px 30px rgba(15, 23, 42, .12);
+  text-align: center; width: min(360px, calc(100vw - 2rem)); }
+.puzzle-card h2 { margin: 0 0 .25rem; font-size: 1.3rem; }
+.puzzle-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .45rem; margin: 1rem auto; }
+.puzzle-tile { aspect-ratio: 1; font-size: 1.6rem; font-weight: 700; border: none; border-radius: 12px;
+  background: #60a5fa; color: #fff; cursor: pointer; }
+.puzzle-empty { background: #e2e8f0; cursor: default; }
+.puzzle-actions { display: flex; gap: .5rem; justify-content: center; }
+@media (max-width: 640px) { .urgent-action-buttons { grid-template-columns: 1fr; } }
+.urgent-phones a[hidden] { display: none; }
+.puzzle-help { margin: .8rem 0 0; font-size: .78rem; color: #64748b; }

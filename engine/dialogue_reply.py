@@ -335,13 +335,17 @@ def _local_reply(message, state):
     goal = state["current_goal"]
     echo = _natural_reflection(message, state)
     if goal == "respect_boundary":
-        return "好，我不追問，也不用現在把事情弄懂。想先停一下，或換個話題，都可以。" if state["boundary_active"] else "沒關係，我們不用現在弄懂。你不用急著整理好才說，也可以先停一下。"
+        if state["boundary_active"]:
+            return "好，我不追問，也不用現在把事情弄懂。想先停一下，或換個話題，都可以。"
+        # Flow chart: an answer of 「不知道」 gets a couple of things to try and a nudge toward a person (2026-10-31).
+        return ("沒關係，說不上來也很正常，不用現在弄懂。想試點什麼的話：可以先把現在的感覺寫下一兩個詞，或起來走一走、喝點水。"
+                "也可以找一位信任的大人或輔導老師聊聊，不用一個人想。")
     if goal == "stabilize":
         return echo + "現在先不用整理原因，也不急著做決定。我先聽，這輪不再加問題。"
     if goal == "establish_safety":
         specific = ("系統不會通知你的家人。" if re.search(r"爸|媽|家人", message) else "")
         if re.search(r"刪|關掉|錄|記錄|紀錄|保存|存", message):
-            specific += "對話會暫存在這個網站，最後一次使用後 24 小時自動失效；目前沒有手動刪除的按鈕。"
+            specific += "對話會暫存在這個網站，最後一次使用後 24 小時自動失效；按「開始新對話」可以馬上刪除這段暫存。"
         return (specific + "你在意誰會知道這些話，這點需要先說清楚。這個網站會暫存對話與整理，雲端 AI 啟用時也會收到對話文字；"
                 "一般情況下，要你同意分享，摘要和這次的對話紀錄才會進工作臺；如果你說的內容可能有安全危險，系統會把必要的安全資訊（不含你的暱稱和聯絡方式）送到真人工作臺，讓受過訓練的人優先查看。"
                 "目前沒有自動通知學校。我不能保證絕對保密，有立即危險時仍需要真人協助。")

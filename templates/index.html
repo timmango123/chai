@@ -29,6 +29,9 @@
     </a>
     <div class="student-header-tools">
       <div class="nav-links" aria-label="需要時再用的求助入口">
+        <button type="button" id="hideButton" class="nav-item header-tool" title="一鍵切到小遊戲畫面，再按「回到對話」就回來">🙈 一鍵隱藏</button>
+        <button type="button" id="jokeButton" class="nav-item header-tool">😄 笑話</button>
+        <button type="button" id="musicToggle" class="nav-item header-tool" aria-pressed="false">🎵 背景音樂</button>
         <button type="button" id="newConversationButton" class="nav-item header-tool" onclick="startNewConversation()" title="清掉剛才的對話，從頭開始">開始新對話</button>
         <button type="button" class="nav-item header-tool" data-open-checkin>身心檢核</button>
         <button type="button" id="headerDraftButton" class="nav-item header-tool" onclick="window.AnlaNextSteps.openNote()">寫求助字條</button>
@@ -117,7 +120,7 @@
           <span class="quick-tag" onclick="quickSend('這陣子胸口常常覺得很緊繃，莫名其妙就很想發脾氣，好煩躁...')">🌪️ 聊聊最近緊繃煩躁的感覺</span>
           <span class="quick-tag" onclick="quickSend('最近心情好低落，做什麼事都提不起勁，覺得很空虛...')">🌧️ 聊聊心裡說不出的低落</span>
           <span class="quick-tag" onclick="quickSend('常常覺得自己很沒用、比不上身邊的同學，好迷惘好自卑...')">🫂 聊聊覺得比不上別人的自卑</span>
-          <span class="quick-tag quick-tag-featured" onclick="startConversationalCheckin()">🔋 安啦，陪我聊聊身心電力</span>
+          <span class="quick-tag quick-tag-featured" onclick="window.AnlaFlow.startCheck()">🔋 安啦，陪我聊聊身心電力</span>
         </div>
 
         <!-- 語音辨識錄音中提示條 -->
@@ -166,7 +169,7 @@
           <button type="button" class="btn-primary-action" data-open-checkin style="margin-top: 0.5rem;">
             開始 3 分鐘檢核 📝
           </button>
-          <button type="button" class="choice-chip" onclick="startConversationalCheckin()" style="margin-top: 0.5rem;">
+          <button type="button" class="choice-chip" onclick="window.AnlaFlow.startCheck()" style="margin-top: 0.5rem;">
             用聊天的方式聊聊 💬
           </button>
         </div>
@@ -222,6 +225,7 @@
         <a href="tel:119" id="urgent119" class="btn-hotline">119 緊急救護</a>
         <a href="tel:110" class="btn-hotline">110 報案</a>
         <a href="tel:1925" class="btn-hotline">1925 安心專線</a>
+        <a href="tel:113" id="urgent113" class="btn-hotline" hidden>113 保護專線</a>
       </div>
     </div>
     <div class="urgent-details">
@@ -229,10 +233,25 @@
       <p>你可以繼續說，也請找可信任的大人到身邊。這個網站不會自動通知學校或替你接通任何中心，請不要等待摘要被查看。</p>
       <p><a href="tel:1995">1995 生命線</a></p>
       <button type="button" id="urgentReferralButton" class="choice-chip" onclick="window.AnlaNextSteps.openReferral()" hidden>查看摘要與轉介選項</button>
+      <div id="urgentActions"></div>
       <div id="urgentChoices"></div>
       <button type="button" id="keepTalkingButton">繼續對話，保留求助電話</button>
     </div>
   </section>
+
+  <!-- 一鍵隱藏：整頁換成益智小遊戲；對話不會刪除，按「回到對話」就回來。 -->
+  <div id="puzzleOverlay" class="puzzle-overlay" hidden>
+    <div class="puzzle-card" role="dialog" aria-label="數字推推樂">
+      <h2>🧩 數字推推樂</h2>
+      <p id="puzzleStatus">把數字推回 1 到 8 的順序。</p>
+      <div id="puzzleGrid" class="puzzle-grid"></div>
+      <div class="puzzle-actions">
+        <button type="button" id="puzzleAgain" class="choice-chip">重新洗牌</button>
+        <button type="button" id="puzzleBack" class="choice-chip">回到對話</button>
+      </div>
+      <p class="puzzle-help">需要時：<a href="tel:1925">1925</a>／<a href="tel:119">119</a></p>
+    </div>
+  </div>
 
   <!-- 先閱讀資料說明即可聊天；聯絡資料可稍後補充，危機電話不受影響。 -->
   <div class="modal-overlay" id="onboardingModal" style="display: none;">
@@ -418,6 +437,7 @@
   <script src="{{ asset('js/app.js') }}"></script>
   <script src="{{ asset('js/referral.js') }}"></script>
   <script src="{{ asset('js/school_referral.js') }}"></script>
+  <script src="{{ asset('js/flow.js') }}"></script>
   <script src="{{ asset('js/checkin.js') }}"></script>
   <script src="{{ asset('js/pwa.js') }}"></script>
 </body>

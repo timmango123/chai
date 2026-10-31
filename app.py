@@ -507,7 +507,7 @@ def api_tts():
     return Response(audio, mimetype=mime, headers={"Cache-Control": "no-store"})
 
 
-APP_VERSION = "2.9.5"  # shown on /health so you can tell which release a host (e.g. Render) is running
+APP_VERSION = "2.10.0"  # shown on /health so you can tell which release a host (e.g. Render) is running
 
 
 @app.route("/health")
@@ -576,7 +576,28 @@ def api_chat_state():
 
 # Session keys that belong to one conversation; 「開始新對話」 clears them (the reply style is the student's choice).
 CONVERSATION_KEYS = ("student_context_id", "highest_risk", "safety_pending", "referral_offer_level",
-                     "support_offer_state", "case_id", "school_referral_topics")
+                     "support_offer_state", "case_id", "school_referral_topics", "opening_mood",
+                     "chat_checkin_offered")
+
+# Flow chart 2026-10-31: the opening mood picker sends 「我今天的心情：😢 很難過」. Negative moods take the
+# negative-emotion branch (Satir listening, then the BSRS-5 questions inside the conversation); a mood alone never
+# raises the safety level or reaches the workbench.
+MOOD_MESSAGE = re.compile(r"^我今天的心情：\s*\S+\s*(.+)$")
+NEGATIVE_MOODS = ("有點焦慮", "很生氣", "很難過", "有點低落")
+
+
+def chat_checkin_offer(context, dialogue_state, level):
+    """Offer the BSRS-5 questions inside the conversation once: at orange after the immediate safety questions
+    (thoughts answered or denied), or after a few turns of a conversation that began with a negative mood."""
+    if session.get("chat_checkin_offered") or level == "red" or (context["draft"].get("bsrs5") or {}):
+        return False
+    settled = dialogue_state.get("ideation_confirmed") or dialogue_state.get("safety_denied")         or dialogue_state.get("safety_turns", 0) >= 2
+    offer = (level == "orange" and settled) or (session.get("opening_mood") == "negative"
+                                               and dialogue_state.get("turn_count", 0) >= 3
+                                               and not dialogue_state.get("safety_check_required"))
+    if offer:
+        session["chat_checkin_offered"] = True
+    return bool(offer)
 
 
 @app.route("/api/chat/reset", methods=["POST"])
@@ -700,6 +721,10 @@ def process_chat_turn(message):
     if session.get("case_id"):
         flag_risk_after_consent(session["case_id"], level)
     alert = safety_alert(level)
+    mood = MOOD_MESSAGE.match(message)
+    if mood and "opening_mood" not in session:
+        session["opening_mood"] = "negative" if mood.group(1).strip() in NEGATIVE_MOODS else "positive"
+    offer_checkin = chat_checkin_offer(context, dialogue_state, level)
     # 性平／霸凌: point to the school counseling office at every risk level. Sent with every message that names
     # the topic (the page shows each topic's card once), so a reply lost to a network error is not the only chance.
     seen = session.get("school_referral_topics", [])
@@ -720,9 +745,14 @@ def process_chat_turn(message):
         # Harness: the reviewed cards this reply cited (title, organisation, link).
         "sources": reply.get("sources", []),
         "show_urgent_help": level == "red",
+        # Proposal: abuse and gender-equity situations also get 113 in the urgent panel.
+        "show_protection_line": bool({*(dialogue_state.get("risk_types") or []), dialogue_state.get("risk_type")}
+                                     & {"abuse", "digital_sexual_violence"}
+                                     or "gender_equity" in session.get("school_referral_topics", [])),
         "show_support_help": level in ("orange", "red"),
         "notification_connected": False,
         "safety_alert": alert,
+        "offer_chat_checkin": offer_checkin,
         "next_steps": student_next_steps(context),
         "school_referral": (school_referral.payload(session["school_referral_topics"], context["profile"].get("student_school", ""),
                                                     county=STUDENT_COUNTY) if topics else None),
@@ -772,8 +802,8 @@ def assessment_feedback(triage, level):
     label (the student page shows no triage colours; scores are for trained staff)."""
     bsrs = triage["bsrs_details"]
     lines = {
-        "green": "謝謝你花時間填完。從你的回答看，最近的困擾還在你撐得住的範圍；如果哪天變重了，隨時回來聊，或找信任的大人說說。",
-        "yellow": "謝謝你願意填完。看起來最近有些事情讓你不太好受，而且已經影響到生活。可以考慮找輔導老師或信任的大人聊聊，我也可以幫你寫一張字條。",
+        "green": "謝謝你花時間回答完。從你的回答看，最近的困擾還在你撐得住的範圍；如果哪天變重了，隨時回來聊，或找信任的大人說說。",
+        "yellow": "謝謝你願意回答完。看起來最近有些事情讓你不太好受。可以考慮找輔導老師或信任的大人聊聊，我也可以幫你寫一張字條。",
         "orange": "謝謝你老實回答。你最近承受的比想像中多，這不是你一個人要扛的事。想請你讓受過訓練的人一起幫忙；下方有現在就能撥的電話。",
         "red": "謝謝你告訴我。你現在的安全最重要：如果有立即危險，請馬上撥 119；想找人談可以打 1925，二十四小時都有人接。",
     }

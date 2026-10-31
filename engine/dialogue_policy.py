@@ -110,14 +110,14 @@ def _valid_observations(hints, message):
     if not isinstance(hints, dict):
         return {}
     valid = {}
-    for key in (*STAGES, "coping", "meta_feeling", "emotion", "willingness", "risk"):
+    for key in (*STAGES, "coping", "meta_feeling", "emotion", "willingness", "risk", "hopelessness"):
         item = hints.get(key)
         if not isinstance(item, dict):
             continue
         quote = item.get("evidence")
         if isinstance(quote, str) and 2 <= len(quote) <= 240 and quote in message:
             valid[key] = {k: v for k, v in item.items()
-                          if k in ("evidence", "value", "signal", "type", "danger", "subject", "affirmed")}
+                          if k in ("evidence", "value", "signal", "type", "danger", "subject", "affirmed", "kind")}
     return valid
 
 
@@ -241,16 +241,30 @@ THIRD_PARTY = (r"(?:朋友|同學|閨蜜|好友|室友|網友|學長|學姊|學�
 # 2026-10-23 simulation: abuse by relatives, sextortion, leaked images and physical bullying went undetected.
 ABUSE = (r"(?:爸|媽|家人|大人|老師|教練|叔叔|阿姨|繼父|繼母|舅舅|舅媽|伯伯|伯父|伯母|姑姑|姑丈|姨丈|阿公|爺爺|外公"
          r"|鄰居|乾爹|男友|男朋友|同居人).{0,18}"
-         r"(?:打我(?!(?:最)?(?:喜歡|愛)?的?(?:羽球|籃球|桌球|排球|網球|棒球|電動|遊戲|球))|揍我"
-         r"|摸我(?!的?(?:頭|頭髮|額頭|肩膀|臉頰))|逼我脫|性侵)"
-         r"|(?:我|同學).{0,6}(?:被虐待|被性侵|被強暴|被家暴|被打(?!槍|敗|爆|球|工|卡|電話|針|招呼))")
+         r"(?:打我(?!(?:最)?(?:喜歡|愛)?的?(?:羽球|籃球|桌球|排球|網球|棒球|電動|遊戲|球)|電話|手機)|揍我"
+         r"|摸我(?!的?(?:頭|頭髮|額頭|肩膀|臉頰))|逼我脫|性侵"
+         # 2026-10-31 詞庫：家中的傷害與照顧剝奪（兒少權法責任通報）。
+         r"|掐我|甩我巴掌|踢我|踹我|燙我|把我鎖在|把我趕出|不給我吃|拿.{0,6}(?:藤條|衣架|皮帶|棍子|水管)(?:打|抽))"
+         r"|(?:我|同學).{0,6}(?:被虐待|被性侵|被強暴|被家暴|被打(?!槍|敗|爆|球|工|卡|電話|針|招呼))"
+         r"|被(?:用|拿)?.{0,4}(?:藤條|衣架|皮帶|水管|棍子|菸頭).{0,4}(?:打|抽|燙)|用菸頭|被甩巴掌|被掐|掐我的?脖子"
+         r"|被趕出(?:家)?門|被鎖在門外|不給我吃(?:飯|東西)|好幾天沒(?:吃東西|吃飯)|回家(?:又)?要被(?:揍|打)"
+         r"|是我(?:爸|媽|哥|姊|姐|繼父|繼母)打的|喝醉(?:了)?就打人|(?:爸|媽|繼父|繼母).{0,4}(?:會)?打我(?:媽|爸)"
+         r"|我(?:哥|姊|姐|弟)(?:一直|常常|又)?打我"
+         # Sexual assault and coercion (性平事件, protection reply with 113).
+         r"|被(?:強暴|性侵|強姦|下藥)|強暴我|性侵我|灌醉.{0,10}(?:發生(?:了)?關係|上了我|做了)"
+         r"|說不要.{0,6}(?:他|她|對方)?(?:還是|仍然|硬要|繼續)|(?:叫|要|逼)我(?:開)?視訊.{0,4}(?:脫|裸|露)"
+         r"|被(?:繼父|繼母|叔叔|舅舅|伯伯|伯父|姑丈|姨丈|阿公|爺爺|外公|哥哥|表哥|堂哥|教練|老師|鄰居)(?:亂)?摸"
+         r"|趁(?:我)?(?:睡覺|睡著|沒人|不注意).{0,8}摸我")
 DIGITAL_SEXUAL_VIOLENCE = (r"(?:威脅|恐嚇|逼我|強迫).{0,25}(?:私密照|裸照|性影像|性愛影片|私密影片|不雅照)"
                            r"|(?:私密照|裸照|性影像|私密影片|不雅照|性愛影片).{0,25}"
                            r"(?:外流|威脅|散布|散佈|公開|PO|po|貼|傳(?:出去|給|到)|上傳|流出)")
 # Physical bullying only; verbal teasing stays with PEER_REJECTION. 「被打敗／打爆」 are games, not violence.
 PEER_VIOLENCE = (r"(?:同學|他們|學長|學姊|學姐|班上的人|一群人|那群人|有人).{0,12}(?:打我(?!一下)|揍我|踹我|圍毆我|堵我)"
                  r"|被(?:同學|學長|學姊|學姐|他們|一群人|那群人)?(?:圍毆|毆打|揍)"
-                 r"|被(?:同學|學長|學姊|學姐|他們|一群人|那群人)打(?!敗|爆|槍|球|工|卡|電話|針|字|掃|招呼|成|平)")
+                 r"|被(?:同學|學長|學姊|學姐|他們|一群人|那群人)打(?!敗|爆|槍|球|工|卡|電話|針|字|掃|招呼|成|平)"
+                 # 2026-10-31 詞庫。
+                 r"|被(?:人|同學|學長|他們|一群人)?扁|扁了(?:我)?一頓|被(?:叫|拉|帶)去廁所|被堵在(?:廁所|樓梯間|巷子|校門口)"
+                 r"|(?:下課|放學)被.{0,4}(?:揍|打)|在學校被打|不給就(?:打|揍)我")
 # PSY-01 passive death wish: one gentle check (yellow); the late-night rule raises it for human review.
 PASSIVE_DEATH_WISH = (r"(?:覺得|乾脆|我)消失(?:了)?(?:也|就)?(?:沒差|沒關係|比較好|算了)|(?:^|乾脆)消失算了"
                       r"|我不在了?(?:也|就)(?:沒差|沒關係|比較好)|睡著(?:了)?就(?:不要|不再|別)醒來")
@@ -271,6 +285,7 @@ CLARIFIED = r"只是(?:在)?(?:抱怨|開玩笑|說說|講講|誇張|形容|比�
 # Acts only: "last chat" or "won't need it" are final words, not acts, so they cannot make a red alone.
 PREPARATORY = (r"(?:把|將).{0,14}(?:帳號|裝備|收藏|寵物|心愛的|最喜歡的|存款|寶貝).{0,10}(?:送給|送人|送掉|留給|分給)"
                r"|(?:把|將).{0,6}(?:所有|全部)(?:的)?東西.{0,6}(?:送給|送人|送掉|留給|分給)"
+               r"|把東西(?:都|全部)(?:送給|送人|送掉|分給)"
                r"|(?:東西|帳號|裝備|收藏)(?:全部|都)(?:送人|送掉|送出去|分掉)|交代(?:好)?後事|託付.{0,6}(?:給你|給你們|照顧)"
                r"|以後(?:就)?(?:麻煩|拜託)?(?:你|你們)?(?:幫我|替我)?照顧(?:好)?(?:我的)?(?:貓|狗|寵物|妹妹|弟弟)"
                r"|寫好.{0,4}(?:遺書|給大家的信)")
@@ -323,7 +338,7 @@ def observe_safety(message, triage, previous=None, hints=None, hour=None):
             # risk_cue picks the wording (peer bullying, leaked images, affect streak); fresh_level is what THIS
             # message shows on its own, for the student-facing safety mode (night review and carry-overs excluded).
             "risk_cue": "", "night_review": False, "fresh_level": "green", "thoughts_confirmed": False,
-            "check_carries": 0}
+            "check_carries": 0, "hopelessness": dict(previous.get("hopelessness") or {})}
     candidates = []
 
     def add(kind, signal, danger, evidence, floor, subject="self", basis=(), cue="", carry=False):
@@ -373,6 +388,10 @@ def observe_safety(message, triage, previous=None, hints=None, hour=None):
 
     ambiguous = r"撐不下去|受不了了|不想撐了|快撐不住"
     indirect = (r"少了我.{0,4}也沒差|沒有我.{0,8}(?:更好|沒差)|(?:如果|希望).{0,5}(?:不要|不再)醒來|希望睡了就不醒|不想醒來"
+                # 2026-10-31 詞庫：計畫書「隱晦與情境詞」，輕度確認並交給 AI 二審。
+                r"|不想再醒來|永遠睡著|(?:好|只|很)?想(?:要)?解脫|想就這樣消失|活著(?:好|很|真的)?沒(?:有)?意義"
+                r"|人生(?:好|很|真的)?沒(?:有)?意義|不想(?:再)?繼續了|死了也(?:不會)?(?:有人|沒人|沒有人)在乎"
+                r"|(?:想)?去另一個世界|(?:想)?去當天使"
                 r"|" + PASSIVE_DEATH_WISH)
     for pattern, signal in ((ambiguous, "ambiguous"), (indirect, "indirect")):
         for _, evidence in _affirmative_matches(pattern, scan):
@@ -508,6 +527,17 @@ def observe_safety(message, triage, previous=None, hints=None, hour=None):
             add(kind, signal, danger, observation["evidence"], floor,
                 observation.get("subject") if observation.get("subject") in ("self", "other") else "unknown",
                 ("ENG-03",))
+    # Proposal 2026-10-31: the AI marks hopelessness cues (無望／無助／無價值感) with the student's own words; the
+    # rules decide the level. One kind: yellow for staff, no question. Two kinds: a gentle check. All three: orange.
+    cue = _valid_observations(hints, message).get("hopelessness", {})
+    if cue.get("kind") in ("hopeless", "helpless", "worthless"):
+        kinds = {**risk["hopelessness"], cue["kind"]: cue["evidence"][:120]}
+        risk["hopelessness"] = kinds
+        if len(kinds) >= 2:
+            add("suicide", "indirect", "possible", cue["evidence"], "orange" if len(kinds) == 3 else "yellow",
+                basis=("PSY-02", "PSY-03"))
+        else:
+            risk["hopelessness_floor"] = "yellow"
     if candidates:
         # A direct current safety threat wins ties over a less specific signal.
         selected = max(candidates, key=lambda c: (WEIGHTS[c["minimum_level"]], c["immediate_danger"] == "imminent",
@@ -556,7 +586,8 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
     state["observation_source"] = "rules+model" if observations else "rules"
     safety = triage.get("dialogue_safety") or observe_safety(message, triage, old, hints)
     state.update({k: v for k, v in safety.items() if k != "minimum_level"})
-    state["risk_level"] = max((triage.get("level", "green"), old.get("risk_level", "green"), safety["minimum_level"]), key=WEIGHTS.get)
+    state["risk_level"] = max((triage.get("level", "green"), old.get("risk_level", "green"), safety["minimum_level"],
+                               safety.get("hopelessness_floor", "green")), key=WEIGHTS.get)
     # Keep the confirmed path across denials and short follow-ups, with fresh danger evidence separate.
     if old.get("risk_level") in ("orange", "red"):
         state["risk_types"] = list(dict.fromkeys(old.get("risk_types", []) + state["risk_types"]))

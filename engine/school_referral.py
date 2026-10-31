@@ -32,7 +32,12 @@ TOPICS = {
             # Grooming-like messages (2026-10-23 live test: 「補習班老師一直私訊我，說我身材很好，還叫我不要跟別人說」).
             r"|(?:說|誇|評論|問|摸)我的?(?:身材|胸部?|腿|屁股|身體|內衣)"
             r"|私訊.{0,30}(?:身材|性感|單獨見面|約我出去|不要跟別人|別跟別人|不能跟別人|不要告訴|別告訴)"
-            r"|(?:傳|私訊|寄).{0,8}(?:噁心|色色|色情|曖昧|露骨)的?(?:訊息|照片|話|圖|影片)",
+            r"|(?:傳|私訊|寄).{0,8}(?:噁心|色色|色情|曖昧|露骨)的?(?:訊息|照片|話|圖|影片)"
+            # 2026-10-31 詞庫（計畫書四類危機詞表擴充）。
+            r"|被[^，,。！!？?]{0,4}?(?:亂)?摸(?!頭|頭髮|額頭|肩膀|臉頰|魚|彩|獎|透|清|索|不著|到)"
+            r"|強吻|硬要親|開黃腔|黃色笑話|是不是處女|(?:要|叫|逼)我(?:傳|拍)(?:裸照|私密照|色色|胸部|身體)"
+            r"|視訊.{0,4}(?:脫|裸)|(?:約我|要我|叫我)(?:去)?開房|掀.{0,2}裙子?"
+            r"|(?:照片|影片|私密照|裸照|影像).{0,4}外流|外流.{0,4}(?:照片|影片)|被灌醉|說不要.{0,6}(?:還是|硬要|繼續)",
             re.I),
     },
     "bullying": {
@@ -46,12 +51,22 @@ TOPICS = {
             r"|(?:群組|班群|IG|限動|貼文|LINE|Line|留言|Dcard|脆).{0,10}(?:笑我|罵我|嘲笑我|酸我|嗆我|針對我|公審我)"
             r"|(?:一直|都在|大家都|全班都).{0,4}(?:笑我|酸我|嗆我)"
             r"|(?:把我|我的).{0,10}(?:照片|醜照|影片).{0,12}(?:梗圖|亂傳|傳到|貼到|散布|散佈|P成|p成)|把我.{0,6}做成梗圖"
-            r"|(?:搶|藏|丟)我的?(?:東西|錢|書包|鞋子?|課本)|把我的?(?:東西|書包|鞋子?|課本)(?:丟|藏|搶|弄壞|撕)"),
+            r"|(?:搶|藏|丟)我的?(?:東西|錢|書包|鞋子?|課本)|把我的?(?:東西|書包|鞋子?|課本)(?:丟|藏|搶|弄壞|撕)"
+            # 2026-10-31 詞庫（計畫書四類危機詞表擴充）。
+            r"|收(?:我)?保護費|跟我(?:收|要)保護費|勒索|逼(?:我)?交錢|跟我要錢.{0,10}(?:打|揍|不給)"
+            r"|靠北版|黑特版|匿名版|假帳號.{0,8}(?:罵|嗆|嘲笑|騷擾)|開.{0,4}帳號.{0,6}罵我|公審"
+            r"|當(?:我是)?空氣|被踢(?:出)?(?:群|群組|班群)|被退出?(?:班群|群組)|(?:全班|大家)都封鎖我"
+            r"|分組.{0,6}沒人要|沒人要跟我(?:一組|同組)|不敢去學校|被堵在|(?:被)?叫去廁所"
+            r"|被扁|扁了(?:我)?一頓|被揍|被.{0,4}揍|被打(?!槍|爆|敗|臉|卡|工|球|電話|招呼|針|擾|字|掃|折|分|趴|醒|翻)|圍毆"
+            r"|拍.{0,2}醜照|被[Pp]成|起底|嗆我|給我好看|拿我的(?:東西|書包|鞋子?|課本).{0,4}(?:丟|藏)", re.I),
     },
 }
 # 「沒有被霸凌」「不是性騷擾」 deny the event; 「被數學霸凌」「被考試霸凌」 are jokes about schoolwork.
 NEGATED = re.compile(r"(?:沒有|沒|不是|並未|從未|不算)被?\s*$")
 JOKE = re.compile(r"(?:數學|英文|國文|物理|化學|考試|作業|功課|題目|天氣|老天|鬧鐘|段考)\s*$")
+# Hitting at home is child protection, not school bullying: 「回家又要被揍」 gets the 113 reply, not the bullying card.
+FAMILY = re.compile(r"爸|媽|家人|家裡|回家|繼父|繼母|阿公|阿嬤|爺爺|奶奶|叔叔|舅舅|伯伯|哥|姊|姐|弟|妹")
+PHYSICAL = re.compile(r"被打|揍|扁|圍毆")
 
 NOTICES = {
     "gender_equity": {
@@ -69,17 +84,28 @@ NOTICES = {
 }
 
 
-def detect_topics(text):
-    """Topic keys mentioned in the student's own words (not denied, not a joke about homework)."""
-    found = []
+def _matches(text):
+    """(topic key, matched words) for each topic in the student's own words: not denied, not a joke about
+    homework, and hitting at home is not school bullying."""
     for key, topic in TOPICS.items():
         for match in topic["pattern"].finditer(text or ""):
             before = text[max(0, match.start() - 6):match.start()]
             if NEGATED.search(before) or (key == "bullying" and JOKE.search(before)):
                 continue
-            found.append(key)
+            if key == "bullying" and PHYSICAL.search(match.group(0)) and FAMILY.search(text):
+                continue
+            yield key, match.group(0)
             break
-    return found
+
+
+def detect_topics(text):
+    """Topic keys mentioned in the student's own words."""
+    return [key for key, _ in _matches(text)]
+
+
+def topic_evidence(text):
+    """The matched words, for the rule engine's yellow level (same wording that shows the counseling card)."""
+    return [words for _, words in _matches(text)]
 
 
 LONG_FORMS = (("國民小學", "國小"), ("國民中學", "國中"), ("高級中等學校", "高中"), ("高級中學", "高中"),

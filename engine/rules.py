@@ -7,6 +7,8 @@
 """
 import re
 
+from engine.school_referral import topic_evidence
+
 # 紅色：高致命性、具體工具/時地/正在行動 (Immediate lethality & action)
 RED_PATTERNS = [
     # 已準備好工具並給出近期時間或行動；細節仍須真人確認。
@@ -21,7 +23,11 @@ RED_PATTERNS = [
     r"(?:我|現在).{0,20}(?:一個人|鎖在房間).{0,24}(?:倒數|五分鐘|全部解決)",
     r"遺書.{0,25}(?:明天|今晚|最後|結束這一切)",
     r"(?:現在|今晚|今天晚上|明天|明天晚上|明晚|等一下|待會|倒數).{0,22}(?:就要|要|會|就想|想).{0,8}"
-    r"(?:自殺|結束這一切|離開這個世界)",
+    r"(?:自殺|結束(?:這)?一切|離開這個世界)",
+    # 2026-10-31 詞庫：所在位置、手段已在手上、藥已存好再加上時間（字序不同的寫法）。
+    r"(?:站在|坐在|爬上|爬到)(?:了)?(?:頂樓|樓頂|天台|女兒牆|橋上|陽台外|欄杆外|窗台上)",
+    r"(?:刀子?|刀片|美工刀|安眠藥|藥|繩子?)(?:已經|都)?.{0,4}(?:在手上|在我手上|拿在手上|準備好|存好|藏好|買好)(?:了)?"
+    r".{0,12}(?:等一下|待會|現在|今晚|今天晚上|馬上).{0,6}(?:就)?(?:割|吞|劃|吃|上吊|跳|用)",
     r"(?:我|自己).{0,15}(?:計畫好|決定).{0,35}(?:明天|今晚|等一下).{0,45}(?:結束這一切|自殺|離開這個世界)",
     r"(?:我|自己).{0,12}(?:決定|計畫).{0,8}(?:今晚|今天晚上|明天).{0,20}(?:全部解決掉|全部解決|一次解決).{0,26}(?:數量|藥|夠)",
     # Time first, then the decision (spec case S04: 「我今晚已決定傷害自己，並已做好準備」 stayed orange).
@@ -40,7 +46,7 @@ RED_PATTERNS = [
     # 嚴重銳器大出血
     r"(割腕|劃深|噴血|流好多血|血一直|地毯都是血|發冷發麻)",
     # 上吊/繩索備妥
-    r"(童軍繩|繩索|繩子).*?(綁在|梁柱|上吊|吊死)",
+    r"(童軍繩|繩索|繩子).*?(綁在|綁好|梁柱|上吊|吊死)",
     # 遺書與告別
     r"(遺書.*?(寫好|桌上|交代)|最後說話|不用找我|大家保重|今晚就要走了)"
 ]
@@ -62,6 +68,15 @@ ORANGE_PATTERNS = [
     r"(想死|好想消失|一睡不醒|結束一切|直接死掉)",
     r"(?:想|要|打算|計畫)(?:去)?(?:吞藥|跳樓|上吊|燒炭|割腕|喝農藥)?自殺|(?:有|出現)(?:了)?自殺(?:的)?(?:念頭|想法)|想結束(?:自己的)?生命",
     r"(?:想|打算|計畫|準備)(?:要)?(?:去)?(?:跳樓(?!梯)|上吊|燒炭|割腕|喝農藥|臥軌)",
+    # 2026-10-31 詞庫：口語與委婉的直接說法。
+    r"(?:想|打算|計畫|準備)(?:要)?(?:衝)?(?:去)?(?:吞藥|跳河|跳海|撞火車|撞車|給車撞|勒死自己)",
+    r"輕生|想不開|活膩|了結(?:自己|生命|我自己)|(?:不如|乾脆)?死(?:一死|了)算了",
+    # 網路用語、諧音、注音、英文（「想4」只在句尾或語氣詞前，「我4點要去」不算）。
+    r"(?:想|好想|去|要)(?:4|鼠|ㄙˇ|ㄙ|s)(?=$|[了啦喔欸耶捏，,。！!？?～~\s])|紫砂|自ㄕ|ㄒㄧㄤˇ\s*ㄙˇ"
+    r"|(?<![A-Za-z])kms(?![A-Za-z])|kill\s*my\s*self|wan(?:t\s*to|na)\s*die|end\s*my\s*life|unalive",
+    r"(?:傷口|傷痕|傷|疤).{0,10}(?:是)?(?:我)?自己(?:割|劃|划)的|是我自己(?:割|劃|划)的",
+    # 道別（PSY-01 準備行為）：「跟大家道別後就去搭車」不算。
+    r"最後一次跟(?:你|妳|大家)(?:說話|聊天|講話)|跟(?:大家|你們|所有人)(?:道別|說再見)了",
     r"(活著好累|為什麼要生我|叫我去死|恨自己|為什麼不能一睡不醒)",
     r"(跳河|陽台跳|如果我死了)",
     r"(自殘|自傷|虐待自己)",
@@ -72,7 +87,7 @@ ORANGE_PATTERNS = [
     r"(?:有|曾經)?(?:想過|這樣想過|有過(?:這種|這個)?(?:念頭|想法)|閃過)",
     r"(開快車|衝下山|撞死算了)",
     # 「被打槍」是拒絕的口語；只排除此語詞，仍檢查同句的其他危險訊號。
-    r"(暴力|砸東西|被打(?!槍)|家暴|逃家)"
+    r"(暴力|砸東西|被打(?!槍|爆|敗|臉|卡|工|球|電話|招呼|針|擾|字|掃|折|分|趴|醒|翻)|家暴|逃家)"
 ]
 
 # 黃色：持續困擾、失眠、拒學、人際孤立、飲食困擾
@@ -83,14 +98,16 @@ YELLOW_PATTERNS = [
     r"(比不上別人|沒用|廢物|被排擠|被笑|被嘲諷)",
     r"(吵架|離婚|爸媽吵|家庭壓力|透不過氣)",
     r"(催吐|容貌焦慮|厭食)",
-    r"(胃痛|胸悶|心悸|發抖|頭痛)"
+    r"(胃痛|胸悶|心悸|發抖|頭痛)",
+    # 2026-10-31 詞庫：家暴兒虐與性平的隱晦說法（計畫書「AI 語意二審」欄），先標黃燈。
+    r"不想回家|回家好可怕|家裡好可怕|身上(?:有|都是)?瘀青|被罰跪|被關在房間|罵我去死|覺得自己(?:很|好)?髒|不敢跟他單獨相處",
 ]
 
 # LIN-01 言語行為理論：「熱到想死」「累到快往生」是表達性（expressive）誇飾，不是行動宣告（commissive）。
 # 只遮蔽誇飾片語本身；同句其他警訊照常比對，誇飾另行回報為待消歧（黃色＋軟性確認），不會被直接忽略。
 # 「難過到想死」等情緒字不在清單內，仍照原規則處理。此調整仍需輔導／心理專業覆核。
 HYPERBOLE_PATTERN = re.compile(
-    r"(?:熱|冷|餓|累|睏|忙|吵|笑|無聊|煩|難|曬|悶|痛|撐|飽|臭|擠)(?:到|得)(?:快|要|都)?"
+    r"(?:熱|冷|餓|累|睏|忙|吵|笑|無聊|煩|難|曬|悶|痛|撐|飽|臭|擠|考|讀|念|唸|寫)(?:到|得)(?:我|人)?(?:快|要|都)?"
     r"(?:想死|死掉|要死|死了|往生|升天|昇天|想撞牆|撞牆|去世|想去世)")
 
 
@@ -98,6 +115,14 @@ def mask_hyperbole(text: str):
     """Return (text with hyperbole spans blanked at the same positions, list of spans)."""
     spans = [m.group(0) for m in HYPERBOLE_PATTERN.finditer(text or "")]
     return HYPERBOLE_PATTERN.sub(lambda m: "　" * len(m.group(0)), text or ""), spans
+
+
+# 「想 死」「想.死」「想-死」：字與字之間的空白與符號先拿掉再比對（不動逗號、句號，以免跨句）。
+SPACED = re.compile(r"(?<=[㐀-鿿ㄅ-ㄩˇˊˋ˙])[ 	.\-_~*·‧]+(?=[㐀-鿿ㄅ-ㄩˇˊˋ˙])")
+
+
+def compact(text: str) -> str:
+    return SPACED.sub("", text or "")
 
 
 def analyze_crisis_rules(text: str) -> dict:
@@ -111,7 +136,7 @@ def analyze_crisis_rules(text: str) -> dict:
             "has_immediate_danger": False,
             "has_self_harm_signal": False
         }
-    text, hyperbole = mask_hyperbole(text)
+    text, hyperbole = mask_hyperbole(compact(text))
 
     def current_clause(start: int, end: int) -> str:
         left = max((text.rfind(mark, 0, start) for mark in "。！？；，\n"), default=-1)
@@ -154,6 +179,9 @@ def analyze_crisis_rules(text: str) -> dict:
     for pattern in YELLOW_PATTERNS:
         yellow_matches.extend(match.group(0) for match in re.finditer(pattern, text, re.IGNORECASE)
                               if not is_quoted_or_negated(match))
+    # Bullying and gender-equity events are at least yellow (proposal 2026-10-31: rule-detected crisis words);
+    # the same wording that shows the school counseling-office card.
+    yellow_matches.extend(topic_evidence(text))
 
     has_immediate_danger = len(red_matches) > 0
     has_self_harm_signal = len(orange_matches) > 0 or has_immediate_danger

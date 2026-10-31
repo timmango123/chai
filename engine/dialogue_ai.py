@@ -151,8 +151,11 @@ ANALYSIS_PROMPT = """
  "willingness":{"value":"low/medium/high","evidence":"原話"},
  "companion_role":{"action":"set/refine","description":"使用者要求的角色原話","evidence":"明確要求你扮演角色或調整語氣的原話"},
  "risk":{"signal":"none/ambiguous/indirect/direct","type":"none/self_harm/suicide/abuse/violence/digital_sexual_violence/other",
-         "danger":"none/possible/imminent","subject":"self/other/unknown","affirmed":true,"evidence":"未被否定的安全線索原話"}
+         "danger":"none/possible/imminent","subject":"self/other/unknown","affirmed":true,"evidence":"未被否定的安全線索原話"},
+ "hopelessness":{"kind":"hopeless/helpless/worthless","evidence":"學生本人說出的絕望相關原話"}
 }
+hopelessness 只標學生本人的原話：hopeless 無望（覺得以後不會變好、沒有希望）、helpless 無助（覺得怎麼做都沒用、沒人幫得了）、
+worthless 無價值感（覺得自己沒用、是累贅、不值得）。一次只標最明顯的一種；抱怨考試或一時的「好煩」不算。
 emotion high 表示無法整理、恐慌或極強情緒，不只是說難過。
 risk affirmed 只有未否定的本人或真實他人危險才為 true；假設、作業、小說、否定用 false。
 imminent 需確實的近期行動、計畫、工具或正在受傷／受威脅證據。

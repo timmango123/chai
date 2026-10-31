@@ -81,6 +81,14 @@ def _has_evidence(triage):
                 or (safety.get("risk_signal", "none") != "none" and safety.get("risk_evidence")))
 
 
+def _own_level(triage):
+    """The level THIS message shows by itself: its rule hits or its dialogue safety cue, not a level carried over
+    from earlier (2026-10-31: a yellow bullying word at a remembered orange level sent a new workbench alert)."""
+    rules = (triage.get("rule_details") or {}).get("triggered_level", "green")
+    fresh = (triage.get("dialogue_safety") or {}).get("fresh_level", "green")
+    return max(rules, fresh, key=RISK_LEVEL_WEIGHTS.get)
+
+
 def stage_student_summary(context_id, email_hash, triage, fields, message=None):
     conn = get_connection()
     try:
@@ -94,7 +102,7 @@ def stage_student_summary(context_id, email_hash, triage, fields, message=None):
             # The sentences that themselves raised orange/red: the only conversation text an automatic safety
             # alert may carry before the student consents (see auto_safety_handoff).
             risk_messages = list(previous.get("risk_messages", []))
-            if message and triage["level"] in ("orange", "red") and _has_evidence(triage):
+            if message and triage["level"] in ("orange", "red") and _own_level(triage) in ("orange", "red"):
                 risk_messages = (risk_messages + [message[:300]])[-5:]
             # 即使兩個分頁同時送出，也沿用原有「可升不可降」結果。
             before, now = RISK_LEVEL_WEIGHTS[previous_triage.get("level", "green")], RISK_LEVEL_WEIGHTS[triage["level"]]
