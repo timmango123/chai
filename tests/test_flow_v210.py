@@ -44,9 +44,10 @@ class MoodAndCheckinTests(RouteBase):
         client, headers = self.student()
         self.chat(client, headers, "最近睡不好")
         data = client.post("/api/assessment", headers=headers, json={
-            "bsrs5": {"sleep": 2, "anxiety": 1, "anger": 1, "depression": 2, "inferiority": 1, "suicide": 0},
+            "bsrs5": {"sleep": 2, "anxiety": 1, "anger": 1, "depression": 2, "inferiority": 1, "suicide": 1},
             "category": "對話中的身心檢核"}).json
         self.assertIn("result", data)
+        self.assertNotIn("勾選", data["result"]["text"])
         self.assertNotIn("分", data["result"]["text"])                  # the student never sees a score
 
     def test_abuse_and_gender_cases_get_113_in_the_urgent_panel(self):
@@ -75,9 +76,29 @@ class HopelessnessTests(Base):
             state = {**state, "history": state.get("history", [])}
         self.assertEqual(state["risk_level"], "orange")
 
+    def test_a_single_cue_keeps_the_ai_reply(self):
+        # 2026-10-31 live test: the level rose green → yellow after the draft was written, the draft was dropped
+        # and the student saw 「AI 暫時連不上」.
+        text = "反正以後也不會變好"
+        reply = "聽起來你對接下來很灰心，這種感覺很沉。是什麼讓你這樣想的？"
+        result, _, state = self.turn(text, {"return_value": single(reply, self.hint("hopeless", text))})
+        self.assertEqual(state["risk_level"], "yellow")
+        self.assertEqual(result["reply"], reply)
+
     def test_a_quote_not_in_the_message_is_ignored(self):
         _, _, state = self.turn("今天好累", {"return_value": single("辛苦了。", self.hint("worthless", "我很沒用"))})
         self.assertEqual(state["risk_level"], "green")
+
+
+class ClarifiedHyperboleTests(Base):
+    def test_a_joke_said_as_a_joke_gets_no_safety_question(self):
+        text = "數學考到我想死啦（開玩笑的）"
+        _, state = prepare_dialogue(text, perform_triage(text), {}, use_model=False, hour=14)
+        self.assertFalse(state["safety_check_required"])
+        self.assertEqual(state["risk_level"], "yellow")                # still noted for staff
+        plain = "數學考到我想死啦"
+        _, state = prepare_dialogue(plain, perform_triage(plain), {}, use_model=False, hour=14)
+        self.assertTrue(state["safety_check_required"])                 # without the clarification: one gentle check
 
 
 class DontKnowTests(Base):
@@ -95,7 +116,8 @@ class PageElementTests(RouteBase):
     def test_the_flow_chart_controls_are_on_the_page(self):
         page = self.student()[0].get("/").get_data(as_text=True)
         for marker in ('id="hideButton"', 'id="jokeButton"', 'id="musicToggle"', 'id="puzzleOverlay"',
-                       'id="urgentActions"', 'id="urgent113"', "js/flow.js", 'class="puzzle-help"'):
+                       'id="urgentActions"', 'id="urgent113"', "js/flow.js", 'class="puzzle-help"',
+                       'class="urgent-hide"'):
             self.assertIn(marker, page)
         script = (ROOT / "static" / "js" / "flow.js").read_text(encoding="utf-8")
         for marker in ("你好嗎？今天心情如何？", "我需要幫助", "我很安全", "幫我整理狀況", "找真人聊聊",

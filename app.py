@@ -507,7 +507,7 @@ def api_tts():
     return Response(audio, mimetype=mime, headers={"Cache-Control": "no-store"})
 
 
-APP_VERSION = "2.10.0"  # shown on /health so you can tell which release a host (e.g. Render) is running
+APP_VERSION = "2.10.1"  # shown on /health so you can tell which release a host (e.g. Render) is running
 
 
 @app.route("/health")
@@ -809,7 +809,7 @@ def assessment_feedback(triage, level):
     }
     text = lines[level]
     if (bsrs.get("suicide_score") or 0) >= 1 and level != "red":
-        text += "你在最後一題有勾選，想直接問你：你現在安全嗎？想說的話可以在對話框跟我說；需要時也可以直接打 1925。"
+        text += "你在最後一題說有出現這樣的想法，想直接問你：你現在安全嗎？想說的話可以在對話框跟我說；需要時也可以直接打 1925。"
     return {"text": text, "ask_safety": (bsrs.get("suicide_score") or 0) >= 1}
 
 

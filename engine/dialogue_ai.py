@@ -726,7 +726,7 @@ def prepare_dialogue(message, triage, previous=None, history=None, use_model=Tru
     # fallback). A safety turn waits at most SAFETY_TIMEOUT seconds.
     eligible = use_model
     limit = min(Config.LLM_TIMEOUT, Config.LLM_TURN_BUDGET, SAFETY_TIMEOUT if state["safety_check_required"] else 1e9)
-    situation = (state["safety_action"], state["risk_level"])
+    situation = _situation(state)
     if eligible and Config.LLM_CALL_MODE == "single":
         # One structured call returns both the evidence hints and a draft reply. Hints can only raise
         # safety; if they change the situation, the draft no longer fits and the reviewed safety text is used.
@@ -790,6 +790,13 @@ def _state_from_history(history, message):
     return state
 
 
+def _situation(state):
+    """What a draft reply depends on: the safety action, and the level only inside safety mode. A level that rises
+    from green to yellow without a safety action (a hopelessness cue noted for staff) does not make the draft wrong
+    (2026-10-31 live test: 「反正以後也不會變好」 was answered with 「AI 暫時連不上」)."""
+    return (state["safety_action"], state["risk_level"] if state["safety_action"] != "none" else "")
+
+
 def generate_youth_response(message, triage_result, conversation_history=None, support_offer=None, dialogue_state=None):
     if dialogue_state is None:
         previous = _state_from_history(conversation_history, message)
@@ -799,9 +806,8 @@ def generate_youth_response(message, triage_result, conversation_history=None, s
         state = dialogue_state
     deadline = state.pop("_turn_deadline", None) or _clock() + Config.LLM_TURN_BUDGET
     prepared = state.pop("_prepared_reply", None)
-    if prepared and prepared.get("situation", (state["safety_action"], state["risk_level"])) != (
-            state["safety_action"], state["risk_level"]):
-        prepared = None  # the model's own analysis changed the situation after it wrote this draft
+    if prepared and prepared.get("situation", _situation(state)) != _situation(state):
+        prepared = None  # the model's own analysis changed the safety situation after it wrote this draft
     offer = None if state["safety_check_required"] else support_offer
     model, status = None, state.get("semantic_status", "builtin")
     cards = prepared.pop("knowledge", []) if prepared else knowledge.select(message, state)
@@ -815,7 +821,7 @@ def generate_youth_response(message, triage_result, conversation_history=None, s
         model = prepared
         if model is None and status == "ok":
             status = "situation_changed"
-        if (model is None and status == "empty" and not state["safety_check_required"]
+        if (model is None and status in ("empty", "situation_changed") and not state["safety_check_required"]
                 and remaining >= MIN_REPLY_SECONDS):
             # One plain reply request after an empty structured answer (2026-10-23 live tests: two
             # empty answers in one afternoon left the student with 「AI 暫時連不上」). Outages and timeouts are not

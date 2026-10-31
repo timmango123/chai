@@ -970,3 +970,9 @@ body.has-urgent-help { padding-top: var(--urgent-help-height, 125px); }
 @media (max-width: 640px) { .urgent-action-buttons { grid-template-columns: 1fr; } }
 .urgent-phones a[hidden] { display: none; }
 .puzzle-help { margin: .8rem 0 0; font-size: .78rem; color: #64748b; }
+/* The panel never grows past the screen: its own content scrolls (2026-10-31 live test: 911 px on a 744 px screen,
+   the bottom could not be reached), and it carries its own hide button because it covers the page header. */
+.urgent-help { max-height: 100dvh; overflow-y: auto; }
+.urgent-primary { position: relative; }
+.urgent-hide { position: absolute; top: .6rem; right: 1rem; border: 1px solid #fca5a5; background: #fff; color: #991b1b;
+  border-radius: 999px; padding: .2rem .7rem; font: inherit; font-size: .85rem; cursor: pointer; }

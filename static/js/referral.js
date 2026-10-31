@@ -453,7 +453,7 @@
       teacherNote(bubble).then(() => keepReplyInView(bubble));
     },
     update(data) {
-      if (data.show_protection_line && byId("urgent113")) byId("urgent113").hidden = false;
+      if ("show_protection_line" in data && byId("urgent113")) byId("urgent113").hidden = !data.show_protection_line;
       if (data.safety_alert) safetyNotice(data.safety_alert);
       if (data.show_urgent_help) showUrgentHelp();
       if (data.next_steps) render(data.next_steps);

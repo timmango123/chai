@@ -445,7 +445,11 @@ def observe_safety(message, triage, previous=None, hints=None, hour=None):
         floor = "orange" if _concerning_priors(previous) >= 2 else "yellow"
         # Someone else's everyday hyperbole (spec case S01 「同學說他熱到想死了，今天真的好熱」) is not a reason to
         # ask about that person dying; the student's own hyperbole still gets one gentle check.
-        if own:
+        if own and floor == "yellow" and re.search(CLARIFIED, message):
+            # 「數學考到我想死啦（開玩笑的）」: already clarified in the same message; noted for staff, no question
+            # (2026-10-31 live test: the gentle check came anyway and felt like not being listened to).
+            risk["quiet_floor"] = "yellow"
+        elif own:
             add("suicide", "ambiguous", "possible", hyperbole[0], floor, "self", ("LIN-01", "SIG-02"))
 
     # DYN-04: affect inertia and abrupt farewell raise one soft check per conversation.
@@ -537,7 +541,7 @@ def observe_safety(message, triage, previous=None, hints=None, hour=None):
             add("suicide", "indirect", "possible", cue["evidence"], "orange" if len(kinds) == 3 else "yellow",
                 basis=("PSY-02", "PSY-03"))
         else:
-            risk["hopelessness_floor"] = "yellow"
+            risk["quiet_floor"] = "yellow"
     if candidates:
         # A direct current safety threat wins ties over a less specific signal.
         selected = max(candidates, key=lambda c: (WEIGHTS[c["minimum_level"]], c["immediate_danger"] == "imminent",
@@ -587,7 +591,7 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
     safety = triage.get("dialogue_safety") or observe_safety(message, triage, old, hints)
     state.update({k: v for k, v in safety.items() if k != "minimum_level"})
     state["risk_level"] = max((triage.get("level", "green"), old.get("risk_level", "green"), safety["minimum_level"],
-                               safety.get("hopelessness_floor", "green")), key=WEIGHTS.get)
+                               safety.get("quiet_floor", "green")), key=WEIGHTS.get)
     # Keep the confirmed path across denials and short follow-ups, with fresh danger evidence separate.
     if old.get("risk_level") in ("orange", "red"):
         state["risk_types"] = list(dict.fromkeys(old.get("risk_types", []) + state["risk_types"]))
