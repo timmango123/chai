@@ -29,9 +29,6 @@
     </a>
     <div class="student-header-tools">
       <div class="nav-links" aria-label="需要時再用的求助入口">
-        <button type="button" id="hideButton" class="nav-item header-tool" title="一鍵切到小遊戲畫面，再按「回到對話」就回來">🙈 一鍵隱藏</button>
-        <button type="button" id="jokeButton" class="nav-item header-tool">😄 笑話</button>
-        <button type="button" id="musicToggle" class="nav-item header-tool" aria-pressed="false">🎵 背景音樂</button>
         <button type="button" id="newConversationButton" class="nav-item header-tool" onclick="startNewConversation()" title="清掉剛才的對話，從頭開始">開始新對話</button>
         <button type="button" class="nav-item header-tool" data-open-checkin>身心檢核</button>
         <button type="button" id="headerDraftButton" class="nav-item header-tool" onclick="window.AnlaNextSteps.openNote()">寫求助字條</button>
@@ -94,25 +91,13 @@
           </div>
         </div>
 
-        <div class="companion-role-note">
-          <span id="companionRoleStatus" role="status" aria-live="polite">陪伴方式由你描述</span>
-          <p>可以直接說「請當一位耐心的學長陪我聊」，也能描述自己的角色、調整語氣，或說「恢復原本的方式」。這裡始終是 AI 陪伴。</p>
+        <!-- Shown only while the student has asked for a companion role. -->
+        <div class="companion-role-note" id="companionRoleNote" hidden>
+          <span id="companionRoleStatus" role="status" aria-live="polite"></span>
         </div>
 
-        <div class="chat-messages" id="chatMessages">
-          <div class="message ai">
-            <div class="avatar">☀️</div>
-            <div class="bubble">
-              哈囉少年仔！我是「安啦會客室」的 AI 陪伴夥伴。👋<br>
-              無論是段考讀不完、跟朋友有小摩擦、在學校覺得孤單，或是家裡的壓力，<br>
-              在這裡你可以放鬆把心事說出來，<b>按下方麥克風 🎙️ 也可以直接用說的喔！</b><br>
-              我會先聽你說；如果現在有立即危險，請直接使用下方的電話求助。
-              <div style="margin-top: 0.5rem; text-align: right;">
-                <button type="button" class="btn-play-voice" onclick="speakMessage(this)">🔊 朗讀這段話</button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <!-- The page opens with the mood question (flow.js); no long greeting before it. -->
+        <div class="chat-messages" id="chatMessages"></div>
 
         <!-- 融入對話的檢核與心情探索標籤 -->
         <div class="quick-tags">
@@ -174,17 +159,14 @@
           </button>
         </div>
 
-        <!-- 雙向語音對答支援卡 -->
+        <!-- 流程圖「全程」：一鍵隱藏、笑話、背景音樂 -->
         <div class="panel-card">
-          <h3>🎙️ 雙向語音對答支援</h3>
-          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
-            專為打字不便或疲憊無力的青少年設計：
-          </p>
-          <ul class="panel-list">
-            <li><b>🎙️ 語音辨識</b>：點擊麥克風直接傾訴心事。</li>
-            <li><b>🔊 溫柔朗讀</b>：陪伴語音溫和朗讀，閉上眼也能聽。</li>
-            <li><b>⚡ 零門檻</b>：瀏覽器原生免安裝，手機電腦通用。</li>
-          </ul>
+          <h3>🌿 喘口氣</h3>
+          <div class="relax-tools">
+            <button type="button" id="hideButton" class="choice-chip" title="一鍵切到小遊戲畫面，再按「回到對話」就回來">🙈 一鍵隱藏</button>
+            <button type="button" id="jokeButton" class="choice-chip">😄 笑話</button>
+            <button type="button" id="musicToggle" class="choice-chip" aria-pressed="false">🎵 背景音樂</button>
+          </div>
         </div>
 
         <!-- 隱私與安全承諾卡 -->

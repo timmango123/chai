@@ -75,9 +75,12 @@ document.addEventListener("DOMContentLoaded", () => {
 function applyCompanionRole(role) {
   const status = document.getElementById("companionRoleStatus");
   if (!status) return;
-  status.textContent = role && role.custom
+  const custom = Boolean(role && role.custom);
+  status.textContent = custom
     ? (role.description ? `目前參考的角色：${role.description}` : "目前依你設定的語氣陪伴")
-    : "陪伴方式由你描述";
+    : "";
+  const note = document.getElementById("companionRoleNote");
+  if (note) note.hidden = !custom;
 }
 
 function applyStudentProfile(profile) {

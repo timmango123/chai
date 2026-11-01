@@ -40,7 +40,7 @@ from engine.support import choose_support_offer
 from engine.bsrs5 import ITEMS as BSRS_ITEMS
 from engine.referral import (
     STUDENT_ALERT_NOTICE, auto_safety_handoff, consent_kind, delete_student_context, get_student_context,
-    record_student_consent,
+    own_message_level, record_student_consent,
     set_student_profile, stage_student_summary,
     save_dialogue_state,
 )
@@ -507,7 +507,7 @@ def api_tts():
     return Response(audio, mimetype=mime, headers={"Cache-Control": "no-store"})
 
 
-APP_VERSION = "2.10.2"  # shown on /health so you can tell which release a host (e.g. Render) is running
+APP_VERSION = "2.11.0"  # shown on /health so you can tell which release a host (e.g. Render) is running
 
 
 @app.route("/health")
@@ -577,13 +577,14 @@ def api_chat_state():
 # Session keys that belong to one conversation; 「開始新對話」 clears them (the reply style is the student's choice).
 CONVERSATION_KEYS = ("student_context_id", "highest_risk", "safety_pending", "referral_offer_level",
                      "support_offer_state", "case_id", "school_referral_topics", "opening_mood",
-                     "chat_checkin_offered")
+                     "chat_checkin_offered", "school_referral_mentions")
 
 # Flow chart 2026-10-31: the opening mood picker sends 「我今天的心情：😢 很難過」. Negative moods take the
 # negative-emotion branch (Satir listening, then the BSRS-5 questions inside the conversation); a mood alone never
 # raises the safety level or reaches the workbench.
-MOOD_MESSAGE = re.compile(r"^我今天的心情：\s*\S+\s*(.+)$")
-NEGATIVE_MOODS = ("有點焦慮", "很生氣", "很難過", "有點低落")
+# 「我今天的心情：😟 焦慮（程度 4/5）」; the strength part is optional (older pages sent only the mood).
+MOOD_MESSAGE = re.compile(r"^我今天的心情：\s*\S+\s*([^（(]+?)\s*(?:[（(]程度\s*[1-5]\s*/\s*5[）)])?$")
+NEGATIVE_MOODS = ("焦慮", "生氣", "難過", "低落", "有點焦慮", "很生氣", "很難過", "有點低落")
 
 
 def chat_checkin_offer(context, dialogue_state, level):
@@ -725,10 +726,16 @@ def process_chat_turn(message):
     if mood and "opening_mood" not in session:
         session["opening_mood"] = "negative" if mood.group(1).strip() in NEGATIVE_MOODS else "positive"
     offer_checkin = chat_checkin_offer(context, dialogue_state, level)
-    # 性平／霸凌: point to the school counseling office at every risk level. Sent with every message that names
-    # the topic (the page shows each topic's card once), so a reply lost to a network error is not the only chance.
+    # 性平／霸凌: point to the school counseling office at every risk level. Mild peer trouble waits for a second
+    # mention (school_referral.card_topics). Sent with every later message that names the topic (the page shows
+    # each topic's card once), so a reply lost to a network error is not the only chance.
     seen = session.get("school_referral_topics", [])
-    topics = school_referral.detect_topics(message)
+    mentions = dict(session.get("school_referral_mentions", {}))
+    for topic in school_referral.detect_topics(message):
+        mentions[topic] = mentions.get(topic, 0) + 1
+    session["school_referral_mentions"] = mentions
+    topics = [t for t in school_referral.detect_topics(message)
+              if t in seen or t in school_referral.card_topics(message, mentions, level)]
     if topics:
         session["school_referral_topics"] = seen + [t for t in topics if t not in seen]
     return jsonify({
@@ -745,6 +752,9 @@ def process_chat_turn(message):
         # Harness: the reviewed cards this reply cited (title, organisation, link).
         "sources": reply.get("sources", []),
         "show_urgent_help": level == "red",
+        # This message is red by itself (not a remembered level): open the full panel and its four buttons again
+        # even after the student chose 「我很安全」.
+        "urgent_new": own_message_level(triage) == "red",
         # Proposal: abuse and gender-equity situations also get 113 in the urgent panel.
         "show_protection_line": bool({*(dialogue_state.get("risk_types") or []), dialogue_state.get("risk_type")}
                                      & {"abuse", "digital_sexual_violence"}

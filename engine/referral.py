@@ -89,6 +89,9 @@ def _own_level(triage):
     return max(rules, fresh, key=RISK_LEVEL_WEIGHTS.get)
 
 
+own_message_level = _own_level
+
+
 def stage_student_summary(context_id, email_hash, triage, fields, message=None):
     conn = get_connection()
     try:

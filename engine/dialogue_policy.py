@@ -714,6 +714,12 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
         goal, strategy, ask = "respond_to_reaction", "reflect_only", False
     elif short:
         goal, strategy, ask = "explore_feeling", "reflect_only", False
+    elif replied and state["known_event"] and state["known_feeling"] and not old.get("asked_past"):
+        # Flow chart branch B (2026-11-01): once the event and the feeling are out, ask whether something similar
+        # happened before (and what helped), then what they plan to do; 「不知道」 then gets small steps.
+        goal, strategy = "explore_past", "reflect_then_ask"
+    elif state["known_event"] and old.get("asked_past") and not old.get("asked_plan"):
+        goal, strategy = "explore_plan", "reflect_then_ask"
     else:
         for known, next_goal in (("expectation", "explore_yearning"), ("perception", "explore_expectation"),
                                  ("feeling", "explore_perception"), ("event", "explore_feeling")):
@@ -737,6 +743,8 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
     state.update(reply_style=style, style_overridden_by_safety=overridden,
                  effective_style="safety" if overridden else style)
     state.update(current_goal=goal, response_strategy=strategy, ask_question=ask, max_questions=int(ask))
+    state["asked_past"] = bool(old.get("asked_past") or (goal == "explore_past" and ask))
+    state["asked_plan"] = bool(old.get("asked_plan") or (goal == "explore_plan" and ask))
     banned = ["ask_multiple_questions", "diagnose", "interpret_for_user", "force_positive", "promise_absolute_confidentiality", "minimize_risk"]
     if goal not in ("support_choice", "answer_question") or no_advice:
         banned.append("give_advice")

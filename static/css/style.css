@@ -940,7 +940,12 @@ body.has-urgent-help { padding-top: var(--urgent-help-height, 125px); }
 .mood-picker { margin-top: .6rem; }
 .mood-question { font-weight: 600; margin-bottom: .4rem; }
 .mood-row { display: flex; flex-wrap: wrap; gap: .4rem; }
-.mood-chip { border: 1px solid #d6c4b5; background: #fff; border-radius: 999px; padding: .35rem .7rem; font: inherit; cursor: pointer; }
+.mood-chip { border: 1px solid #d6c4b5; background: #fff; color: #3b2a1e; border-radius: 999px; padding: .35rem .7rem; font: inherit; cursor: pointer; }
+.relax-tools { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .5rem; }
+.mood-strength-label { width: 100%; margin: .2rem 0 0; font-size: .9rem; }
+.mood-strength-row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.mood-strength-row .mood-chip { min-width: 2.6rem; text-align: center; }
+.mood-scale-end { font-size: .85rem; opacity: .8; }
 .mood-chip:hover, .mood-chip:focus-visible { background: #fff4e8; outline: 2px solid #e8a77a; }
 .chat-check-chips { margin-top: .5rem; }
 .chip-quiet { opacity: .75; }

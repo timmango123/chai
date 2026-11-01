@@ -32,12 +32,15 @@
       button.disabled = value || Boolean(current?.recorded);
     });
   }
-  function showUrgentHelp() {
-    if (urgentActive) return;
-    urgentActive = true;
+  // reopen: a new red message after the student chose 「我很安全」 opens the full panel (four buttons) again.
+  function showUrgentHelp(reopen = false) {
     const panel = byId("urgentHelpPanel");
+    if (urgentActive && !(reopen && panel.classList.contains("is-compact"))) return;
+    urgentActive = true;
     panel.hidden = false;
     panel.classList.remove("is-compact");
+    document.body.classList.remove("has-urgent-help");
+    placeChoices();
     byId("urgent119").focus();
   }
   function placeChoices() {
@@ -455,7 +458,7 @@
     update(data) {
       if ("show_protection_line" in data && byId("urgent113")) byId("urgent113").hidden = !data.show_protection_line;
       if (data.safety_alert) safetyNotice(data.safety_alert);
-      if (data.show_urgent_help) showUrgentHelp();
+      if (data.show_urgent_help) showUrgentHelp(Boolean(data.urgent_new));
       if (data.next_steps) render(data.next_steps);
     }
   };

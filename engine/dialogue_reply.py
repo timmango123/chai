@@ -423,6 +423,8 @@ def _local_reply(message, state):
         "clarify_event": "哪一件事讓你最在意？",
         # Open, not leading: 「比較像失望」 chose the answer for the student (counselling review).
         "explore_feeling": "那時候你心裡是什麼感覺？想說再說。",
+        "explore_past": "以前有遇過類似的情況嗎，那時候是怎麼撐過來的？",
+        "explore_plan": "這件事你自己有打算怎麼處理嗎？",
         "explore_perception": "這件事讓你怎麼看自己或對方？",
         "explore_expectation": "你原本希望對方怎麼回應你？",
         "explore_yearning": "如果對方願意這樣做，對你最重要的是什麼？",

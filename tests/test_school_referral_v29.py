@@ -130,20 +130,34 @@ class RouteTests(RouteBase):
 
     def test_any_risk_level_gets_the_card_with_every_mention(self):
         client, headers = self.student()
-        first = self.chat(client, headers, "班上同學一直排擠我，下課都沒人理我")
-        self.assertFalse(first["show_support_help"])                     # an everyday (not urgent) message
+        # Mild peer trouble is listened to first; the card comes with the second mention (2026-11-01 live test:
+        # the card after 「他們都私底下嘲笑我」 felt too early).
+        mild = self.chat(client, headers, "班上同學一直排擠我，下課都沒人理我")
+        self.assertFalse(mild["show_support_help"])                      # an everyday (not urgent) message
+        self.assertIsNone(mild["school_referral"])
+        self.assertFalse(mild["school_referral_available"])
+        first = self.chat(client, headers, "今天又被排擠了")
         self.assertEqual(first["school_referral"]["topics"], ["霸凌"])
         self.assertIn("1953", first["school_referral"]["notices"][0]["text"])
         self.assertIsNone(first["school_referral"]["school"])
-        # Sent again with every mention (the page shows each topic once): a first reply lost to a network error
+        # Sent again with every later mention (the page shows each topic once): a reply lost to a network error
         # left the student without the card (2026-10-23 live test 「被同學霸凌」).
-        again = self.chat(client, headers, "今天又被排擠了")
+        again = self.chat(client, headers, "他們還是一直孤立我")
         self.assertEqual(again["school_referral"]["topics"], ["霸凌"])
         self.assertIsNone(self.chat(client, headers, "今天午餐吃咖哩")["school_referral"])
         self.assertTrue(again["school_referral_available"])               # the header button stays
         both = self.chat(client, headers, "還有學長在走廊摸我屁股")
         self.assertEqual(both["school_referral"]["topics"], ["霸凌", "性平事件"])
         self.assertTrue(client.get("/api/chat/state").json["school_referral_available"])
+
+    def test_serious_bullying_and_gender_events_get_the_card_at_once(self):
+        for message, topic in (("我被霸凌了", "霸凌"), ("下課被堵在廁所", "霸凌"), ("學長跟我收保護費", "霸凌"),
+                               ("他們把我的醜照傳到班群", "霸凌"), ("補習班老師摸我大腿", "性平事件")):
+            client, headers = self.student()
+            self.assertEqual(self.chat(client, headers, message)["school_referral"]["topics"], [topic], message)
+        for message in ("他們都私底下嘲笑我", "分組的時候都沒人要跟我一組", "同學都不理我"):
+            client, headers = self.student()
+            self.assertIsNone(self.chat(client, headers, message)["school_referral"], message)
 
     def test_urgent_messages_get_the_card_too(self):
         client, headers = self.student()

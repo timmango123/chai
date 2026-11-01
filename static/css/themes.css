@@ -283,6 +283,10 @@ html[data-theme] .urgent-help .next-step-panel { background: #ffffff; color: #1e
 html[data-theme] .next-step-panel { background: var(--t-surface-3); border-color: var(--t-border-strong); color: var(--t-text); }
 html[data-theme] .choice-chip { background: var(--t-surface); color: var(--t-accent-ink); border-color: var(--t-border-strong); }
 html[data-theme] .choice-note { color: var(--t-muted); }
+html[data-theme] .mood-chip { background: var(--t-surface); color: var(--t-text); border-color: var(--t-border-strong); }
+html[data-theme] .mood-chip:hover,
+html[data-theme] .mood-chip:focus-visible,
+html[data-theme] .mood-chip[aria-pressed="true"] { background: var(--t-accent-soft); color: var(--t-accent-ink); outline-color: var(--t-accent); }
 html[data-theme] .inline-support-link { color: var(--t-accent-ink); }
 html[data-theme] .student-consent-label { border-color: var(--t-ok-border); color: var(--t-ok-text); }
 html[data-theme] .urgent-help .choice-chip { background: #ffffff; color: #1e3a5f; border-color: #64748b; }

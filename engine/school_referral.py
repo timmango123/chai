@@ -103,6 +103,26 @@ def detect_topics(text):
     return [key for key, _ in _matches(text)]
 
 
+# Mild peer trouble (laughed at, left out, a nickname) is listened to first; the counseling card waits until it comes
+# up again (2026-11-01: the card after 「他們都私底下嘲笑我」 felt too early). Every 性平 event, the word 霸凌,
+# violence, threats, extortion, exposure online and being afraid to go to school get the card at once.
+SERIOUS_BULLYING = re.compile(
+    r"霸凌|勒索|保護費|交錢|要錢|圍毆|扁|揍|被打|被堵|廁所|不敢去學校|給我好看|肉搜|起底|公審|醜照|梗圖|[Pp]成"
+    r"|照片|影片|搶|藏|丟|弄壞|撕|帳號|謠言|造謠|靠北版|黑特版|匿名版")
+CARD_AFTER_MENTIONS = 2
+
+
+def card_topics(text, mentions, level="green"):
+    """Topics whose counseling card shows now. mentions: how many messages so far named each topic, this one
+    included. Orange and red show it at once too."""
+    ready = []
+    for key, words in _matches(text):
+        if (key == "gender_equity" or level in ("orange", "red") or mentions.get(key, 0) >= CARD_AFTER_MENTIONS
+                or SERIOUS_BULLYING.search(words)):
+            ready.append(key)
+    return ready
+
+
 def topic_evidence(text):
     """The matched words, for the rule engine's yellow level (same wording that shows the counseling card)."""
     return [words for _, words in _matches(text)]

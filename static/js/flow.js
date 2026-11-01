@@ -28,27 +28,45 @@ window.AnlaFlow = (() => {
   }
 
   // ---------- 開場心情（流程圖「你好嗎？今天心情如何？」） ----------
-  const MOODS = [["😃", "超開心"], ["😊", "還不錯"], ["🙂", "普通"], ["😟", "有點焦慮"], ["😡", "很生氣"],
-                 ["😢", "很難過"], ["😞", "有點低落"]];
+  // Flow chart: a mood, then how strong it is (1–5).
+  const MOODS = [["😃", "開心"], ["😊", "還不錯"], ["🙂", "普通"], ["😟", "焦慮"], ["😡", "生氣"],
+                 ["😢", "難過"], ["😞", "低落"]];
 
   function moodPicker() {
     if (byId("moodPicker") || typeof appendMessage !== "function") return;
-    // Its own short message after the greeting, so it is in view without scrolling.
     const bubble = appendMessage("ai", "你好嗎？今天心情如何？點一個最接近的就好：");
     const box = bubble.closest(".message");
     box.id = "moodPicker";
     const row = el("div", "", "mood-row mood-picker");
+    const strength = el("div", "", "mood-strength-row");
+    strength.hidden = true;
     MOODS.forEach(([emoji, label]) => {
       const b = chip(`${emoji} ${label}`, () => {
-        box.remove();
-        const input = byId("userInput");
-        input.value = `我今天的心情：${emoji} ${label}`;
-        sendMessage();
+        row.querySelectorAll(".mood-chip").forEach(other => other.setAttribute("aria-pressed", String(other === b)));
+        askStrength(strength, emoji, label);
       }, "mood-chip");
-      b.setAttribute("aria-label", label);
+      b.setAttribute("aria-pressed", "false");
       row.appendChild(b);
     });
-    bubble.appendChild(row);
+    bubble.append(row, strength);
+    scrollToEnd();
+  }
+
+  function askStrength(strength, emoji, label) {
+    strength.replaceChildren(el("p", `「${label}」大概有多強烈？`, "mood-strength-label"),
+                             el("span", "1 一點點", "mood-scale-end"));
+    for (let n = 1; n <= 5; n++) {
+      const b = chip(String(n), () => {
+        byId("moodPicker")?.remove();
+        byId("userInput").value = `我今天的心情：${emoji} ${label}（程度 ${n}/5）`;
+        sendMessage();
+      }, "mood-chip");
+      b.setAttribute("aria-label", `程度 ${n}，滿分 5`);
+      strength.appendChild(b);
+    }
+    strength.appendChild(el("span", "5 非常強烈", "mood-scale-end"));
+    strength.hidden = false;
+    strength.querySelector("button")?.focus();
     scrollToEnd();
   }
 
