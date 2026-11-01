@@ -58,6 +58,22 @@ class PastAndPlanQuestionTests(RouteBase):
         self.assertLess(goals.index("explore_past"), goals.index("explore_plan"))
         self.assertEqual(goals.count("explore_past"), 1)
 
+    def test_the_plan_question_is_asked_even_after_two_questioning_replies(self):
+        # 2026-11-01 Render round 2: real replies end with a question, so the "rest" rule silenced the plan
+        # question and 「不知道」 never reached the small steps.
+        for lines in (["今天上課被老師當全班的面罵，因為我作業沒交", "覺得很丟臉，也很委屈",
+                       "國小的時候也有一次，那時候是回家哭一哭就好了", "還不知道"],
+                      ["我昨天跟男朋友分手了", "心裡空空的，一直想哭", "之前沒有過", "不知道"]):
+            state, goals = {}, []
+            for message in lines:
+                history = state.get("history", [])
+                state = build_state(message, perform_triage(text=message, previous_level="green"), state, history=history)
+                goals.append((state["current_goal"], state["ask_question"]))
+                state["history"] = history + [{"role": "user", "text": message},
+                                              {"role": "assistant", "text": "聽起來很不好受。你願意多說一點嗎？"}]
+            self.assertEqual(goals[1:], [("explore_past", True), ("explore_plan", True),
+                                         ("suggest_after_unknown", False)])
+
 
 class PageTests(RouteBase):
     def test_the_page_opens_with_the_mood_question_only(self):

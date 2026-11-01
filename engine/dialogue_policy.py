@@ -13,6 +13,7 @@ POLICY_VERSION = "satir-2026-10-19.2"
 WEIGHTS = {"green": 1, "yellow": 2, "orange": 3, "red": 4}
 STAGES = ("event", "feeling", "perception", "expectation", "yearning", "self")
 # 「不知道」「還沒想到」 as an answer (compacted text, so short answers only).
+PAST_ANSWER = r"以前|之前|上次|上一次|國小|國中的時候|小時候|曾經|也有(?:一次|過)|也是這樣|有啊|沒有過|沒發生過|第一次"
 UNKNOWN_ANSWER = r"^(?:我|嗯|呃|就)?(?:也|還|真的)?(?:不知道|不曉得|不清楚|沒想法|沒想到|想不到|還沒想|沒頭緒)(?:耶|欸|啊|啦|吧|要怎麼辦|怎麼辦|該怎麼辦)?$"
 RISK_TYPES = ("none", "self_harm", "suicide", "abuse", "violence", "digital_sexual_violence", "other")
 REPLY_STYLES = ("warm", "lively", "humor", "rational", "listen_only")
@@ -22,7 +23,7 @@ REACTION_ASK = r"為什麼|為啥|怎麼說|什麼意思|啥意思|然後呢|所
 LOW_REPLIES = {"不知道", "我不知道", "不曉得", "嗯", "嗯嗯", "喔", "哦", "沒事", "還好", "差不多吧", "不知道怎麼說", "說不上來"}
 BOUNDARY = r"不想(?:再)?(?:講|說|談)|不要(?:再|一直)?問|別(?:再|一直)?問|不想(?:一直)?被問|關你什麼事|只想.{0,4}(?:聽|陪)|只要.{0,4}(?:聽|陪)"
 HIGH_EMOTION = r"哭到|哭不停|哭得停不下|一直哭|暴怒|氣到發抖|恐慌|腦袋一片空白|完全無法思考|快崩潰|全部的人都在針對我|閉嘴"
-FEELING = r"難過|失望|委屈|生氣|超煩|很煩|焦慮|害怕|心慌|緊張|心情不好|低落|尷尬|丟臉|孤單|疲累|很累|開心|擔心|不敢|胃痛"
+FEELING = r"難過|失望|委屈|生氣|超煩|很煩|焦慮|害怕|心慌|緊張|心情不好|低落|尷尬|丟臉|孤單|疲累|很累|開心|擔心|不敢|胃痛|空空|想哭|挫折|沮喪|傷心"
 PATTERNS = {
     "event": r"告白|被打槍|老師罵|考很爛|考試|段考|成績|吵架|拒絕|只把我當朋友|今天|昨天|爸媽|我爸|我媽|同學|劃好.*重點|選科系",
     "feeling": FEELING,
@@ -735,7 +736,10 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
                 break
     recent = [t["text"] for t in turns if t["role"] == "assistant"][-2:]
     # The rest after two questioning turns does not apply when the student is correcting a misreading.
-    if goal not in ("safety_support", "repair_understanding") and len(recent) == 2 and all(re.search(r"[？?]", r) for r in recent):
+    # Once the student has answered the past question, the flow chart's plan question follows; resting there
+    # meant it was never asked (2026-11-01 Render round 2: 6 of 12 branch-B stories never heard it).
+    answered_past = goal == "explore_plan" and bool(re.search(PAST_ANSWER, message))
+    if goal not in ("safety_support", "repair_understanding") and not answered_past and len(recent) == 2 and all(re.search(r"[？?]", r) for r in recent):
         ask, strategy = False, "reflect_only"
     # v2.3 reply styles are the student's choice; any safety check takes the tone back (safety override).
     style = reply_style if reply_style in REPLY_STYLES else old.get("reply_style") if old.get("reply_style") in REPLY_STYLES else "warm"
