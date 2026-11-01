@@ -12,6 +12,8 @@ from engine.school_referral import detect_topics
 POLICY_VERSION = "satir-2026-10-19.2"
 WEIGHTS = {"green": 1, "yellow": 2, "orange": 3, "red": 4}
 STAGES = ("event", "feeling", "perception", "expectation", "yearning", "self")
+# 「不知道」「還沒想到」 as an answer (compacted text, so short answers only).
+UNKNOWN_ANSWER = r"^(?:我|嗯|呃|就)?(?:也|還|真的)?(?:不知道|不曉得|不清楚|沒想法|沒想到|想不到|還沒想|沒頭緒)(?:耶|欸|啊|啦|吧|要怎麼辦|怎麼辦|該怎麼辦)?$"
 RISK_TYPES = ("none", "self_harm", "suicide", "abuse", "violence", "digital_sexual_violence", "other")
 REPLY_STYLES = ("warm", "lively", "humor", "rational", "listen_only")
 # Short reactions to the assistant's last sentence (punctuation already removed by compact()).
@@ -690,6 +692,11 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
         goal, strategy, ask = "safety_support", "safety_check", True
     elif state["emotion_intensity"] == "high":
         goal, strategy, ask = "stabilize", "reflect_only", False
+    elif (not state["boundary_active"] and re.search(UNKNOWN_ANSWER, text) and not old.get("unknown_help_given")
+          and (old.get("asked_plan") or state["uncertainty_streak"] >= 2)):
+        # Flow chart: 「不知道」 to how they will handle it gets a couple of small things to try and a nudge toward a
+        # person (2026-11-01 live simulation: most AI replies only said 「想到再說」).
+        goal, strategy, ask = "suggest_after_unknown", "support_next_step", False
     elif state["boundary_active"] or state["conversation_willingness"] == "low" or state["uncertainty_streak"] >= 2:
         goal, strategy, ask = "respect_boundary", "respect_boundary", False
     elif state["privacy_concern"]:
@@ -745,8 +752,9 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
     state.update(current_goal=goal, response_strategy=strategy, ask_question=ask, max_questions=int(ask))
     state["asked_past"] = bool(old.get("asked_past") or (goal == "explore_past" and ask))
     state["asked_plan"] = bool(old.get("asked_plan") or (goal == "explore_plan" and ask))
+    state["unknown_help_given"] = bool(old.get("unknown_help_given") or goal == "suggest_after_unknown")
     banned = ["ask_multiple_questions", "diagnose", "interpret_for_user", "force_positive", "promise_absolute_confidentiality", "minimize_risk"]
-    if goal not in ("support_choice", "answer_question") or no_advice:
+    if goal not in ("support_choice", "answer_question", "suggest_after_unknown") or no_advice:
         banned.append("give_advice")
     if goal in ("safety_support", "stabilize", "respect_boundary", "establish_safety", "integrate", "respond_to_reaction",
                 "repair_understanding"):

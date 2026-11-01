@@ -76,3 +76,40 @@ class PageTests(RouteBase):
         self.assertIn("html[data-theme] .mood-chip", themes)
         referral = (ROOT / "static" / "js" / "referral.js").read_text(encoding="utf-8")
         self.assertIn("showUrgentHelp(Boolean(data.urgent_new))", referral)
+
+
+class SimulationFindingsTests(RouteBase):
+    """2026-11-01 Render 擬真模擬（175 則）發現的問題。"""
+
+    def test_a_second_mention_in_other_words_shows_the_card(self):
+        from engine.school_referral import detect_topics
+        for message in ("今天他們又在笑我", "今天又被取笑了", "他們笑我很胖", "被同學嘲笑"):
+            self.assertEqual(detect_topics(message), ["bullying"], message)
+        for message in ("笑死我了", "我們又在笑那部影片", "爸爸又在罵我", "媽媽又在笑我胖"):
+            self.assertEqual(detect_topics(message), [], message)
+
+    def test_unknown_after_the_plan_question_gets_small_steps_and_a_person(self):
+        from engine.dialogue_reply import local_reply
+        state = {}
+        for message in ["今天在學校被老師當全班的面罵，覺得很丟臉", "因為我作業沒交，可是我前一天在照顧生病的妹妹",
+                        "有啊國小的時候也有一次", "我也覺得很委屈", "不知道"]:
+            history = state.get("history", [])
+            state = build_state(message, perform_triage(text=message, previous_level="green"), state, history=history)
+            state["history"] = history + [{"role": "user", "text": message}, {"role": "assistant", "text": "嗯。"}]
+            state["last_reply"] = "嗯。"
+        self.assertTrue(state["asked_plan"])
+        self.assertEqual(state["current_goal"], "suggest_after_unknown")
+        self.assertNotIn("give_advice", state["forbidden_actions"])
+        reply = local_reply("不知道", state)
+        self.assertIn("輔導老師", reply)
+        state["history"] += [{"role": "user", "text": "不知道"}]
+        again = build_state("不知道", perform_triage(text="不知道", previous_level="green"), state, history=state["history"])
+        self.assertEqual(again["current_goal"], "respect_boundary")      # once; then it stops pushing
+
+    def test_a_blocked_privacy_reply_sends_the_reviewed_text(self):
+        from engine import dialogue_ai
+        state = build_state("你會跟我爸媽講嗎", perform_triage(text="你會跟我爸媽講嗎"), {})
+        self.assertEqual(state["current_goal"], "establish_safety")
+        self.assertIn("establish_safety", dialogue_ai.REVIEWED_FALLBACK_GOALS)
+        source = (ROOT / "engine" / "dialogue_ai.py").read_text(encoding="utf-8")
+        self.assertIn('"model_used": "對話規則回覆", "fallback_reason": status', source)

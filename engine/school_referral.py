@@ -50,6 +50,8 @@ TOPICS = {
             # Online bullying (2026-10-23 live test: 「他們一直在LINE群組裡笑我，還把我的照片做成梗圖」).
             r"|(?:群組|班群|IG|限動|貼文|LINE|Line|留言|Dcard|脆).{0,10}(?:笑我|罵我|嘲笑我|酸我|嗆我|針對我|公審我)"
             r"|(?:一直|都在|大家都|全班都).{0,4}(?:笑我|酸我|嗆我)"
+            # 2026-11-01 live simulation: the second mention 「今天他們又在笑我」「今天又被取笑了」 was not recognised.
+            r"|又(?:在|來)?(?:笑|嘲笑|取笑|酸|嗆)我|被(?:同學|他們|大家)?(?:取笑|嘲笑)|笑我(?:很)?(?:胖|醜|矮|黑|娘|笨|蠢|窮|口音|的口音)"
             r"|(?:把我|我的).{0,10}(?:照片|醜照|影片).{0,12}(?:梗圖|亂傳|傳到|貼到|散布|散佈|P成|p成)|把我.{0,6}做成梗圖"
             r"|(?:搶|藏|丟)我的?(?:東西|錢|書包|鞋子?|課本)|把我的?(?:東西|書包|鞋子?|課本)(?:丟|藏|搶|弄壞|撕)"
             # 2026-10-31 詞庫（計畫書四類危機詞表擴充）。
@@ -67,6 +69,8 @@ JOKE = re.compile(r"(?:數學|英文|國文|物理|化學|考試|作業|功課|�
 # Hitting at home is child protection, not school bullying: 「回家又要被揍」 gets the 113 reply, not the bullying card.
 FAMILY = re.compile(r"爸|媽|家人|家裡|回家|繼父|繼母|阿公|阿嬤|爺爺|奶奶|叔叔|舅舅|伯伯|哥|姊|姐|弟|妹")
 PHYSICAL = re.compile(r"被打|揍|扁|圍毆")
+TEASED = re.compile(r"笑|酸|嗆")
+PEERS = re.compile(r"同學|學長|學姊|學弟|學妹|班上|全班|學校|社團|群組|班群|朋友")
 
 NOTICES = {
     "gender_equity": {
@@ -93,6 +97,9 @@ def _matches(text):
             if NEGATED.search(before) or (key == "bullying" and JOKE.search(before)):
                 continue
             if key == "bullying" and PHYSICAL.search(match.group(0)) and FAMILY.search(text):
+                continue
+            # 「媽媽又在笑我胖」 is family, not school bullying, unless peers are named too.
+            if key == "bullying" and TEASED.search(match.group(0)) and FAMILY.search(text) and not PEERS.search(text):
                 continue
             yield key, match.group(0)
             break

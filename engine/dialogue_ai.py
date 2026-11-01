@@ -68,7 +68,8 @@ max_questions=1 時不要只回一句感想就停，讓學生不知道怎麼接�
 不要替家人、老師或任何人斷定善意或動機，尤其不要預設「他們都是為你好」；只反映使用者提到的立場或行為。
 當 current_goal=integrate 且本輪無求助時，簡短收束而不深挖；current_goal=support_choice 時，接一句理解後給一個可選擇的實際小步驟。
 current_goal=explore_past 表示學生已說了發生什麼事和感受：簡短承接後，問一句「以前有遇過類似的情況嗎？那時候是怎麼撐過來的？」這類問題（用自己的話，只問一件事），找出他自己用過、有用的方法。
-current_goal=explore_plan 表示已經聊過以前的經驗：簡短承接後，問一句「這件事你自己有打算怎麼處理嗎？」這類問題，讓學生自己想下一步；不要先替他出主意。學生說不知道時，下一輪再給一兩個小方法。
+current_goal=explore_plan 表示已經聊過以前的經驗：簡短承接後，這一輪一定要問「這件事你自己有打算怎麼處理嗎？」這類問題（用問句，不要只說「可以慢慢想」），讓學生自己想下一步；不要先替他出主意。
+current_goal=suggest_after_unknown 表示學生對怎麼處理說了不知道：先接住「不知道也沒關係」，再給一兩個貼合他說過的事、現在就做得到的小方法，最後用一句話說可以找輔導老師或信任的大人一起想；不用問題結尾。
 current_goal=respond_to_reaction 表示使用者只回「真的嗎」「為什麼」「什麼意思」這類反應，是在回應你上一句：針對上一句簡短說明你的意思，或承認可能說得不準，把解釋權還給使用者；不要當成新話題，也不要轉去問感受。
 current_goal=answer_question 表示學生在問一個資訊或做法的問題（例如電子煙的影響、幾歲可以打工、被霸凌可以找誰）：先直接、簡短回答；有參考資料卡就依卡片回答並標出來源；沒有參考資料卡時只說確定的一般原則，不編數字、日期、法規細節或來源，並說可以問輔導老師或查官方網站。最後可以用一句話問這是不是和他自己的處境有關。
 current_goal=repair_understanding 表示使用者在修正你的理解（「不是啦」「我說的是…」）：用半句承認聽錯，接著照新的意思回應內容本身；新的意思還不清楚時，可以問一個問題弄清楚（例如三天後是什麼事）。不要只道歉就結束。
@@ -584,7 +585,9 @@ def memory_for_prompt(state):
     return json.dumps({key: _as_prompt_data(state.get(key)) for key in keys}, ensure_ascii=False)
 
 
-LOCAL_GOALS = ("respect_boundary", "stabilize", "establish_safety", "configure_role", "clarify_identity")
+LOCAL_GOALS = ("respect_boundary", "stabilize", "establish_safety", "configure_role", "clarify_identity",
+               "suggest_after_unknown")
+REVIEWED_FALLBACK_GOALS = ("respect_boundary", "establish_safety", "clarify_identity", "suggest_after_unknown")
 
 
 SAFETY_TIMEOUT = 12  # seconds: a crisis reply never waits long for the model; the reviewed fixed text is the fallback
@@ -879,6 +882,10 @@ def generate_youth_response(message, triage_result, conversation_history=None, s
             return result
         logging.info("對話回覆未通過規則檢查：%s", ",".join(hard))
         status = "rule_check"
+        if state["current_goal"] in REVIEWED_FALLBACK_GOALS:
+            # Privacy, identity and 「不知道」 turns have a reviewed answer; sending it beats 「沒辦法回覆」
+            # (2026-11-01 live simulation: 「你會跟我爸媽講嗎」 got the outage notice).
+            return {"reply": local_reply(message, state), "model_used": "對話規則回覆", "fallback_reason": status}
     elif status not in ("builtin", "no_key"):
         logging.info("AI 無法回覆：%s", status)
     return {"reply": unavailable_reply(status), "model_used": UNAVAILABLE_LABEL, "fallback_reason": status}

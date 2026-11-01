@@ -334,7 +334,7 @@ def _natural_reflection(message, state=None):
 def _local_reply(message, state):
     goal = state["current_goal"]
     echo = _natural_reflection(message, state)
-    if goal == "respect_boundary":
+    if goal in ("respect_boundary", "suggest_after_unknown"):
         if state["boundary_active"]:
             return "好，我不追問，也不用現在把事情弄懂。想先停一下，或換個話題，都可以。"
         # Flow chart: an answer of 「不知道」 gets a couple of things to try and a nudge toward a person (2026-10-31).
