@@ -7,7 +7,7 @@
 "use strict";
 
 const CACHE_PREFIX = "anla-shell-";
-const CACHE_NAME = CACHE_PREFIX + "v2026-11-01.3";
+const CACHE_NAME = CACHE_PREFIX + "v2026-11-08.1";
 const OFFLINE_URLS = ["/offline", "/static/offline.html"];
 const SHELL = [
   ...OFFLINE_URLS,
@@ -26,7 +26,11 @@ const SHELL = [
   "/static/icons/icon-512.png",
   "/static/icons/icon-maskable-192.png",
   "/static/icons/icon-maskable-512.png",
-  "/static/icons/apple-touch-icon.png"
+  "/static/icons/apple-touch-icon.png",
+  "/static/stickers/find-person.webp",
+  "/static/stickers/make-note.webp",
+  "/static/stickers/need-help.webp",
+  "/static/stickers/safe.webp"
 ];
 
 self.addEventListener("install", event => {

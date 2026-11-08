@@ -760,6 +760,8 @@ def process_chat_turn(message):
                                      & {"abuse", "digital_sexual_violence"}
                                      or "gender_equity" in session.get("school_referral_topics", [])),
         "show_support_help": level in ("orange", "red"),
+        # Yellow / orange: once, gently suggest a trusted person or the school counseling office (no light shown).
+        "encourage_trusted_people": level in ("yellow", "orange"),
         "notification_connected": False,
         "safety_alert": alert,
         "offer_chat_checkin": offer_checkin,

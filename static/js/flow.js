@@ -167,71 +167,143 @@ window.AnlaFlow = (() => {
     return a;
   }
 
+  function telLink(r) {
+    const a = el("a", String(r.phone));
+    a.href = `tel:${String(r.phone).split(/[#/]/)[0].replace(/[^0-9]/g, "")}`;
+    return a;
+  }
+
+  function resourceList(items) {
+    const list = el("ul", "", "urgent-action-list");
+    items.forEach(r => {
+      const item = el("li", `${r.name}：`);
+      item.appendChild(telLink(r));
+      list.appendChild(item);
+    });
+    return list;
+  }
+
+  // 按鈕一：校內、校外輔導與醫療資源，依學生登錄的鄉鎮排序。
   async function showResources(box) {
     box.replaceChildren(el("p", "現在就能打的電話：", "urgent-action-title"));
     const row = el("div", "", "urgent-action-phones");
     [["119", "緊急救護"], ["110", "報案"], ["1925", "安心專線（24 小時）"], ["1995", "生命線（24 小時）"],
      ["113", "保護專線（24 小時）"], ["1980", "張老師"]].forEach(([n, l]) => row.appendChild(phone(n, l)));
     box.appendChild(row);
+    box.appendChild(el("p", "🏫 校內資源", "urgent-action-title"));
+    box.appendChild(el("p", "學校輔導室：上課時間可以直接走進去，或請導師、信任的老師陪你去。不知道怎麼開口，可以按「📝 幫我整理狀況」做一張小卡帶著。"));
     try {
       const state = await (await fetch("/api/chat/state", {cache: "no-store"})).json();
       const township = state.student_profile?.township || "南投市";
       const data = await (await fetch(`/api/resources?township=${encodeURIComponent(township)}`)).json();
-      const list = el("ul", "", "urgent-action-list");
-      (data.resources || []).slice(0, 4).forEach(r => {
-        const item = el("li", `${r.name}：`);
-        const tel = el("a", r.phone);
-        tel.href = `tel:${String(r.phone).split("#")[0].replace(/[^0-9]/g, "")}`;
-        item.appendChild(tel);
-        list.appendChild(item);
-      });
-      box.appendChild(el("p", `${township}附近的輔導與心理資源：`, "urgent-action-title"));
-      box.appendChild(list);
+      const all = data.resources || [];
+      const near = r => (r.township === township || (r.suggested_townships || []).includes(township) ? 0 : 1);
+      const pick = test => all.filter(r => test(r.category || "")).sort((a, b) => near(a) - near(b));
+      const school = pick(c => c.includes("校園輔導"));
+      if (school.length) box.appendChild(resourceList(school.slice(0, 1)));
+      const counsel = pick(c => c.includes("心衛中心") || c.includes("心理及聯合") || c.includes("協談"));
+      box.appendChild(el("p", `🤝 校外輔導與諮商（${township}附近）`, "urgent-action-title"));
+      box.appendChild(resourceList(counsel.slice(0, 4)));
+      const medical = pick(c => c.includes("醫院") || c.includes("身心科") || c.includes("衛生所"));
+      box.appendChild(el("p", "🏥 醫療資源", "urgent-action-title"));
+      box.appendChild(resourceList(medical.slice(0, 4)));
       box.appendChild(link("看全部南投資源", "/resources"));
     } catch (_) { /* the phones above are enough */ }
   }
 
+  // 按鈕四：21:00 前直接打開生命線 LINE 文字協談；21:00 後先陪你緩一下（小遊戲／笑話／預約專業資源）。
+  function isLate(now) {
+    return now.getHours() >= 21 || now.getHours() < 6;
+  }
+
   function showFindPerson(box) {
     const now = new Date();
-    const late = now.getHours() >= 21 || now.getHours() < 6;
-    box.replaceChildren(el("p", "這些地方現在可以找真人：", "urgent-action-title"));
+    const late = isLate(now);
+    box.replaceChildren();
+    if (!late) {
+      box.appendChild(el("p", "幫你打開生命線的 LINE 文字協談，可以直接打字跟真人聊 💬", "urgent-action-title"));
+      const opened = window.open(LIFELINE_LINE, "_blank", "noopener");
+      const again = el("p", "");
+      again.append(opened ? "如果沒有跳出來，" : "瀏覽器擋住了新視窗，", link("點這裡打開生命線 LINE", LIFELINE_LINE), "。");
+      box.appendChild(again);
+      box.appendChild(el("p", "想用講的也可以，這些電話都有真人：", "urgent-action-title"));
+      const row = el("div", "", "urgent-action-phones");
+      row.appendChild(phone("1995", "生命線"));
+      row.appendChild(phone("1925", "安心專線（24 小時）"));
+      row.appendChild(phone("1980", "張老師"));
+      box.appendChild(row);
+      const src = el("p", "", "school-referral-hint");
+      src.append("生命線文字協談的服務時間以", link("生命線官網", LIFELINE_SOURCE), "公告為準。");
+      box.appendChild(src);
+      return;
+    }
+    box.appendChild(el("p", "已經晚上 9 點多了，生命線的文字協談可能已經休息。你願意先讓我陪你緩一下嗎？", "urgent-action-title"));
+    const choices = el("div", "", "choice-chips");
+    choices.appendChild(chip("🎮 玩一下小遊戲", () => openGame(false)));
+    choices.appendChild(chip("😄 聽個笑話", tellJoke));
+    choices.appendChild(chip("📅 預約專業資源", () => showBooking(box)));
+    box.appendChild(choices);
+    box.appendChild(el("p", "如果真的很難受、想現在就跟人說話，這兩支電話 24 小時都有真人接：", "urgent-action-title"));
     const row = el("div", "", "urgent-action-phones");
     row.appendChild(phone("1925", "安心專線（24 小時）"));
     row.appendChild(phone("1995", "生命線（24 小時）"));
-    if (!late) row.appendChild(phone("1980", "張老師"));
     box.appendChild(row);
-    const line = el("p", "");
-    if (lifelineOpen(now)) {
-      line.append("💬 不想講電話，可以用 LINE 打字跟生命線的人聊：", link("生命線文字協談", LIFELINE_LINE));
-    } else {
-      line.append("💬 生命線文字協談（LINE）平日 13:00–17:00、18:00–01:00，週末夜間也有；現在不在服務時間，",
-                  link("時間以官網為準", LIFELINE_SOURCE), "。");
-    }
-    box.appendChild(line);
-    if (late) {
-      box.appendChild(el("p", "已經很晚了。打電話是最快的；如果現在還不想打，也可以先讓自己緩一下：", "urgent-action-title"));
-      const choices = el("div", "", "choice-chips");
-      choices.appendChild(chip("🎮 玩一下小遊戲", () => openGame(false)));
-      choices.appendChild(chip("😄 聽個笑話", tellJoke));
-      choices.appendChild(chip("📅 預約專業資源", () => showBooking(box)));
-      box.appendChild(choices);
-    } else {
-      box.appendChild(chip("📅 預約專業資源", () => showBooking(box)));
-    }
   }
 
+  // 南投縣心理諮商預約單：學生在畫面上填好、複製，再自己打電話或交給輔導室；網站不會代為送出。
+  const BOOKING_CENTERS = [["南投區社區心理衛生中心", "049-2202662"], ["埔里區社區心理衛生中心", "049-2911925"],
+                           ["竹山區社區心理衛生中心", "049-2631925"]];
+
   function showBooking(box) {
+    if (box.querySelector(".urgent-booking")) {
+      box.querySelector(".urgent-booking").scrollIntoView({block: "nearest"});
+      return;
+    }
     const card = el("div", "", "urgent-booking");
-    card.appendChild(el("p", "南投縣社區心理衛生中心有免費心理諮商（一段 4 次、每次約 50 分鐘），上班時間打電話預約：", ""));
+    card.appendChild(el("h4", "📅 南投縣心理諮商預約單", "booking-title"));
+    card.appendChild(el("p", "南投縣社區心理衛生中心提供免費心理諮商（一段 4 次、每次約 50 分鐘）。先把下面填一填，上班時間打電話時照著念就好；也可以交給學校輔導室請老師幫你轉介。"));
+    const form = el("div", "", "booking-form");
+    const fields = {};
+    [["name", "怎麼稱呼你（暱稱也可以）", "text"], ["age", "年級／年齡", "text"],
+     ["time", "方便接電話或去諮商的時間", "text"], ["topic", "想談的事情（寫幾個字就好）", "textarea"]].forEach(([key, label, type]) => {
+      const id = `booking_${key}`;
+      const caption = el("label", label);
+      caption.htmlFor = id;
+      const input = document.createElement(type === "textarea" ? "textarea" : "input");
+      input.id = id;
+      if (type === "textarea") input.rows = 2; else input.type = "text";
+      input.maxLength = 200;
+      form.append(caption, input);
+      fields[key] = input;
+    });
+    const centerLabel = el("label", "想預約的中心");
+    centerLabel.htmlFor = "booking_center";
+    const center = document.createElement("select");
+    center.id = "booking_center";
+    BOOKING_CENTERS.forEach(([n, p]) => center.appendChild(new Option(`${n}（${p}）`, `${n}（${p}）`)));
+    form.append(centerLabel, center);
+    card.appendChild(form);
+    const copy = chip("複製預約單", async () => {
+      const text = ["【南投縣心理諮商預約單】", `稱呼：${fields.name.value.trim() || "（未填）"}`,
+                    `年級／年齡：${fields.age.value.trim() || "（未填）"}`, `方便的時間：${fields.time.value.trim() || "（未填）"}`,
+                    `想談的事情：${fields.topic.value.trim() || "（未填）"}`, `預約中心：${center.value}`].join("\n");
+      try {
+        await navigator.clipboard.writeText(text);
+        copy.textContent = "已複製 ✔";
+      } catch (_) {
+        copy.textContent = "無法自動複製，請手動抄下";
+      }
+    });
+    card.appendChild(copy);
     const row = el("div", "", "urgent-action-phones");
-    row.appendChild(phone("049-2202662", "南投區"));
-    row.appendChild(phone("049-2631925", "竹山區"));
+    BOOKING_CENTERS.forEach(([n, p]) => row.appendChild(phone(p, n.replace("社區心理衛生中心", ""))));
     card.appendChild(row);
     const src = el("p", "", "school-referral-hint");
     src.append("資料來源：", link("南投縣政府衛生局〈我要心理諮商〉", "https://www.ntshb.gov.tw/counseling/index?Parser=99,5,74,42"),
-               "。學生也可以請學校輔導室幫忙轉介。");
+               "。這張單只存在你的畫面上，網站不會替你送出。");
     card.appendChild(src);
     box.appendChild(card);
+    fields.name.focus();
   }
 
   // The note is shown inside the panel: the panel covers the whole screen, so a note added to the chat behind it
@@ -267,15 +339,31 @@ window.AnlaFlow = (() => {
     if (!host || host.childElementCount) return;
     const box = el("div", "", "urgent-action-box");
     const buttons = el("div", "", "urgent-action-buttons");
-    buttons.appendChild(chip("🆘 我需要幫助", () => showResources(box), "urgent-action"));
-    buttons.appendChild(chip("🙂 我很安全", () => {
-      byId("keepTalkingButton")?.click();
-      const input = byId("userInput");
-      input.value = "我現在是安全的，只是需要有人陪我聊聊";
-      sendMessage();
-    }, "urgent-action"));
-    buttons.appendChild(chip("📝 幫我整理狀況", () => showNote(box), "urgent-action"));
-    buttons.appendChild(chip("🙋 找真人聊聊", () => showFindPerson(box), "urgent-action"));
+    // 2026-11-08 四個按鈕改用貼圖（static/stickers），排列跟原圖一樣：找真人聊聊、幫我整理狀況／我需要幫助、我很安全。
+    const sticker = (label, file, onClick) => {
+      const b = chip("", onClick, "urgent-action urgent-sticker");
+      b.setAttribute("aria-label", label);
+      b.title = label;
+      const img = el("img");
+      img.src = `/static/stickers/${file}.webp`;
+      img.alt = label;
+      img.width = 360;
+      img.height = 315;
+      b.appendChild(img);
+      return b;
+    };
+    buttons.append(
+      sticker("找真人聊聊", "find-person", () => showFindPerson(box)),
+      sticker("幫我整理狀況", "make-note", () => showNote(box)),
+      sticker("我需要幫助", "need-help", () => showResources(box)),
+      sticker("我很安全", "safe", () => {
+        // 回到對話：仍保留高風險觀察（伺服器的燈號不會因此降低），求助電話列縮小保留，但不再自動跳出四個按鈕。
+        window.AnlaNextSteps?.stayCompact?.();
+        byId("keepTalkingButton")?.click();
+        const input = byId("userInput");
+        input.value = "我現在是安全的，只是需要有人陪我聊聊";
+        sendMessage();
+      }));
     host.append(buttons, box);
   }
 
@@ -302,6 +390,26 @@ window.AnlaFlow = (() => {
     return out;
   }
 
+  // 遊戲中的打氣話（流程圖：遊戲過程要給滿滿的情緒價值）。一鍵隱藏時不顯示，避免被旁人看出來。
+  const CHEERS = [
+    "你很專心耶，慢慢推就好 👍", "這一步很聰明！", "不用急，卡住也沒關係，換個方向試試 🌱",
+    "你願意先讓自己喘口氣，真的很棒。", "越來越接近了，我在旁邊幫你加油！", "手感來了喔 ✨",
+    "每推一格都是前進，就跟你一樣。", "你比你以為的還要厲害。", "休息一下也可以，我會一直在這裡。",
+  ];
+  let moves = 0, cheerHidden = false;
+
+  function cheer(solved) {
+    const box = byId("puzzleCheer");
+    if (!box || cheerHidden) return;
+    if (solved) {
+      box.textContent = `🎉 完成了！只用了 ${moves} 步。你真的很棒，願意陪自己度過這段時間的你，也很了不起。`;
+    } else if (moves === 1) {
+      box.textContent = "好，開始了！慢慢來，沒有時間限制 😊";
+    } else if (moves % 6 === 0) {
+      box.textContent = CHEERS[Math.floor(Math.random() * CHEERS.length)];
+    }
+  }
+
   function drawGame() {
     const grid = byId("puzzleGrid");
     grid.replaceChildren();
@@ -310,6 +418,7 @@ window.AnlaFlow = (() => {
         const z = tiles.indexOf(0);
         if (!neighbours(z).includes(i)) return;
         [tiles[z], tiles[i]] = [tiles[i], tiles[z]];
+        moves += 1;
         drawGame();
       }, n ? "puzzle-tile" : "puzzle-tile puzzle-empty");
       t.disabled = !n;
@@ -317,12 +426,21 @@ window.AnlaFlow = (() => {
     });
     const solved = tiles.join(",") === "1,2,3,4,5,6,7,8,0";
     byId("puzzleStatus").textContent = solved ? "完成了！要再玩一次嗎？" : "把數字推回 1 到 8 的順序。";
+    cheer(solved);
+  }
+
+  function newGame() {
+    tiles = shuffled();
+    moves = 0;
+    const box = byId("puzzleCheer");
+    if (box) box.textContent = cheerHidden ? "" : "謝謝你願意先陪自己一下。這局慢慢玩，玩完再回來聊也可以 💛";
+    drawGame();
   }
 
   function openGame(hidden) {
     const overlay = byId("puzzleOverlay");
-    tiles = shuffled();
-    drawGame();
+    cheerHidden = Boolean(hidden);
+    newGame();
     overlay.hidden = false;
     overlay.dataset.hidden = hidden ? "true" : "";
     document.title = hidden ? "數字推推樂" : document.title;
@@ -345,40 +463,127 @@ window.AnlaFlow = (() => {
       const old = audio;
       setTimeout(() => old.ctx.close(), 1500);
       audio = null;
-      button.textContent = "🎵 背景音樂";
+      button.textContent = "🌊 白噪音";
       button.setAttribute("aria-pressed", "false");
       return;
     }
-    // A soft generated pad (no audio files, nothing downloaded): four gentle chords, slow fades, low volume.
+    // 平靜的白噪音（2026-11-08 回饋：音樂改平靜一點）：在本機產生柔和的棕噪音，經低通濾波，
+    // 音量像海浪一樣每 10 秒緩慢起伏。不下載任何音檔。
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const seconds = 4, buffer = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < data.length; i++) {
+      last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;   // brown noise: soft, low rumble
+      data[i] = last * 3.5;
+    }
+    // Fade the loop seam so it never clicks.
+    const fade = Math.floor(ctx.sampleRate * 0.05);
+    for (let i = 0; i < fade; i++) {
+      const k = i / fade;
+      data[i] = data[i] * k + data[data.length - fade + i] * (1 - k);
+    }
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.loopEnd = seconds - 0.05;
+    const filter = ctx.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 900;
+    const wave = ctx.createGain();
+    wave.gain.value = 0.75;
+    const lfo = ctx.createOscillator(), depth = ctx.createGain();
+    lfo.frequency.value = 0.1;                                    // one slow swell every 10 seconds
+    depth.gain.value = 0.25;
+    lfo.connect(depth).connect(wave.gain);
     const master = ctx.createGain();
     master.gain.value = 0;
-    master.connect(ctx.destination);
-    master.gain.setTargetAtTime(0.06, ctx.currentTime, 1.5);
-    const chords = [[261.6, 329.6, 392.0, 493.9], [220.0, 261.6, 329.6, 392.0], [174.6, 220.0, 261.6, 329.6],
-                    [196.0, 246.9, 293.7, 329.6]];
-    let step = 0;
-    function play() {
-      if (!audio) return;
-      const t = ctx.currentTime;
-      chords[step % chords.length].forEach(freq => {
-        const osc = ctx.createOscillator(), gain = ctx.createGain();
-        osc.type = "sine";
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, t);
-        gain.gain.linearRampToValueAtTime(0.25, t + 1.5);
-        gain.gain.linearRampToValueAtTime(0, t + 4.2);
-        osc.connect(gain).connect(master);
-        osc.start(t);
-        osc.stop(t + 4.3);
-      });
-      step += 1;
-      audio.timer = setTimeout(play, 4000);
-    }
-    audio = {ctx, master, timer: null};
-    play();
-    button.textContent = "🎵 音樂：開";
+    source.connect(filter).connect(wave).connect(master).connect(ctx.destination);
+    master.gain.setTargetAtTime(0.35, ctx.currentTime, 1.5);
+    source.start();
+    lfo.start();
+    audio = {ctx, master};
+    button.textContent = "🌊 白噪音：開";
     button.setAttribute("aria-pressed", "true");
+  }
+
+  // ---------- 4-7-8 呼吸（放在「喘口氣」工具區；不離開對話頁） ----------
+  const BREATH = [["吸氣", 4, "用鼻子慢慢吸氣"], ["停住", 7, "輕輕停住，不用憋太用力"], ["吐氣", 8, "用嘴巴慢慢把氣吐乾淨"]];
+  let breathTimer = null;
+
+  function openBreath() {
+    const overlay = byId("breathOverlay");
+    if (!overlay) return;
+    overlay.hidden = false;
+    if (typeof stopSpeech === "function") stopSpeech();
+    runBreath();
+    byId("breathClose").focus();
+  }
+
+  function closeBreath() {
+    clearTimeout(breathTimer);
+    breathTimer = null;
+    const overlay = byId("breathOverlay");
+    if (overlay) overlay.hidden = true;
+    byId("userInput")?.focus();
+  }
+
+  function runBreath() {
+    clearTimeout(breathTimer);
+    const ball = byId("breathBall"), phaseEl = byId("breathPhase"), hint = byId("breathHint"), count = byId("breathCount");
+    const roundEl = byId("breathRound");
+    const ROUNDS = 4;
+    let round = 1, phase = 0, left = BREATH[0][1];
+    function show() {
+      const [name, secs, tip] = BREATH[phase];
+      phaseEl.textContent = name;
+      hint.textContent = tip;
+      roundEl.textContent = `第 ${round} / ${ROUNDS} 輪`;
+      if (left === secs) {
+        ball.style.transitionDuration = `${secs}s`;
+        ball.style.transform = phase === 0 ? "scale(1)" : phase === 1 ? "scale(1)" : "scale(.45)";
+      }
+      count.textContent = String(left);
+    }
+    function tick() {
+      left -= 1;
+      if (left <= 0) {
+        phase += 1;
+        if (phase >= BREATH.length) {
+          phase = 0;
+          round += 1;
+          if (round > ROUNDS) {
+            phaseEl.textContent = "完成了";
+            hint.textContent = "做得很好。身體有沒有比剛剛鬆一點點？想再做一次可以按「再做一次」。";
+            count.textContent = "🌿";
+            ball.style.transform = "scale(.7)";
+            return;
+          }
+        }
+        left = BREATH[phase][1];
+      }
+      show();
+      breathTimer = setTimeout(tick, 1000);
+    }
+    ball.style.transitionDuration = "0s";
+    ball.style.transform = "scale(.45)";
+    requestAnimationFrame(() => { show(); breathTimer = setTimeout(tick, 1000); });
+  }
+
+  // ---------- 黃燈／橙燈：鼓勵找身邊信任的人或輔導室聊聊（學生頁仍不顯示燈號） ----------
+  let nudged = false;
+  function encourageTrustedPeople(bubble, wanted) {
+    if (nudged || !bubble || !wanted) return;
+    nudged = true;
+    const box = el("div", "", "trusted-nudge");
+    box.appendChild(el("p", "💛 這些心事不用一個人扛。如果願意，也可以找身邊信任的人（家人、朋友、導師）聊聊，或在下課時間去學校輔導室坐坐，輔導老師很願意聽你說。", ""));
+    const row = el("div", "", "choice-chips");
+    row.appendChild(chip("📝 幫我寫一張給輔導老師的字條", () => window.AnlaNextSteps?.openNote()));
+    row.appendChild(chip("💬 不知道怎麼開口？", () => {
+      box.appendChild(el("p", "可以這樣說：「老師／○○，我最近心情有點不好，可以找時間跟你聊一下嗎？」不用一次說完，先說一句就很棒了。", "chat-check-note"));
+    }));
+    box.appendChild(row);
+    bubble.appendChild(box);
   }
 
   const JOKES = [
@@ -417,13 +622,19 @@ window.AnlaFlow = (() => {
     urgentActions();
     byId("hideButton")?.addEventListener("click", () => openGame(true));
     byId("puzzleBack")?.addEventListener("click", closeGame);
-    byId("puzzleAgain")?.addEventListener("click", () => { tiles = shuffled(); drawGame(); });
+    byId("puzzleAgain")?.addEventListener("click", newGame);
     byId("musicToggle")?.addEventListener("click", toggleMusic);
     byId("jokeButton")?.addEventListener("click", tellJoke);
+    byId("breathButton")?.addEventListener("click", openBreath);
+    byId("breathClose")?.addEventListener("click", closeBreath);
+    byId("breathAgain")?.addEventListener("click", runBreath);
     document.addEventListener("keydown", event => {
-      if (event.key === "Escape" && byId("puzzleOverlay") && !byId("puzzleOverlay").hidden) closeGame();
+      if (event.key !== "Escape") return;
+      if (byId("puzzleOverlay") && !byId("puzzleOverlay").hidden) closeGame();
+      if (byId("breathOverlay") && !byId("breathOverlay").hidden) closeBreath();
     });
   });
 
-  return {startCheck, offerCheck, openGame, tellJoke, lifelineOpen, removeMoodPicker: () => byId("moodPicker")?.remove()};
+  return {startCheck, offerCheck, openGame, tellJoke, lifelineOpen, isLate, openBreath, encourageTrustedPeople,
+          removeMoodPicker: () => byId("moodPicker")?.remove()};
 })();

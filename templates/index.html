@@ -104,7 +104,7 @@
           <span class="quick-tag" onclick="quickSend('最近課業和考試讓我有點壓力，想聊聊。')">📚 聊聊最近的課業壓力</span>
           <span class="quick-tag" onclick="quickSend('我最近想到升學或未來就有點煩惱，想找人聊聊。')">🌱 聊聊升學與未來的煩惱</span>
           <span class="quick-tag" onclick="quickSend('最近和朋友或同學相處有些事情讓我在意。')">🫂 聊聊和朋友同學的相處</span>
-          <span class="quick-tag" onclick="quickSend('最近我常常對自己沒自信，想說說心裡的感覺。')">🪞 聊聊對自己的感覺</span>
+          <span class="quick-tag" onclick="quickSend('我想說一說心裡的感覺')">🪞 聊聊對自己的感覺</span>
           <span class="quick-tag" onclick="quickSend('最近和家人相處有些壓力，我想聊聊。')">🏠 聊聊家人相處的煩惱</span>
           <span class="quick-tag quick-tag-featured" onclick="window.AnlaFlow.startCheck()">🔋 安啦，陪我聊聊身心電力</span>
         </div>
@@ -160,13 +160,14 @@
           </button>
         </div>
 
-        <!-- 流程圖「全程」：一鍵隱藏、笑話、背景音樂 -->
+        <!-- 流程圖「全程」：一鍵隱藏、笑話、白噪音、4-7-8 呼吸 -->
         <div class="panel-card">
           <h3>🌿 喘口氣</h3>
           <div class="relax-tools">
             <button type="button" id="hideButton" class="choice-chip" title="一鍵切到小遊戲畫面，再按「回到對話」就回來">🙈 一鍵隱藏</button>
             <button type="button" id="jokeButton" class="choice-chip">😄 笑話</button>
-            <button type="button" id="musicToggle" class="choice-chip" aria-pressed="false">🎵 背景音樂</button>
+            <button type="button" id="breathButton" class="choice-chip" title="跟著圓圈做 4-7-8 呼吸，約 1 分半">🫧 4-7-8 呼吸</button>
+            <button type="button" id="musicToggle" class="choice-chip" aria-pressed="false" title="平靜的白噪音，再按一次關閉">🌊 白噪音</button>
           </div>
         </div>
 
@@ -174,10 +175,11 @@
         <div class="panel-card">
           <h3>🛡️ 安全與隱私承諾</h3>
           <ul class="panel-list">
-            <li><b>對話無燈號標籤</b>：學生端不呈現任何疾病評分與風險燈號。</li>
-            <li><b>授權工作臺</b>：你明確同意後，授權人員才能在工作臺查看你分享的摘要與對話；唯一例外是對話出現可能危及安全的內容時，系統會自動送出必要的安全資訊（燈號、引發警訊的那幾句話、時間、鄉鎮，不含暱稱、學校、聯絡方式與完整對話），並在畫面上告訴你。目前尚未接入正式學校值班機制。</li>
-            <li><b>先用暱稱聊聊</b>：學校與信箱都可留白，需要分享摘要時再自行補充；填寫不會自動寄信或通報。</li>
+            <li>對話不會留下紀錄，也不會外流。</li>
+            <li>怕被其他人看到，可使用<b>一鍵式隱藏</b>。</li>
+            <li>不需要馬上留下個人資料，可在需要求助時再填寫。</li>
           </ul>
+          <p class="panel-fine">對話只在伺服器加密暫存，最後使用 24 小時後自動清除。唯一例外：如果對話出現可能危及安全的內容，系統會把必要的安全資訊（不含暱稱、學校與聯絡方式）交給受過訓練的人員關心你，並在畫面上告訴你。</p>
         </div>
 
         <!-- 在地求助專線 -->
@@ -192,7 +194,6 @@
             <a href="tel:119" class="btn-hotline">🚨 119 緊急救護</a>
             <a href="tel:110" class="btn-hotline">📞 110 報案</a>
           </div>
-          <a href="/offline" class="lifeline-link">🫧 4-7-8 呼吸練習與求助電話（離線也能開）</a>
         </div>
 
       </div>
@@ -205,6 +206,7 @@
     <div class="urgent-primary">
       <strong>現在請先找人陪你，直接求助</strong>
       <button type="button" class="urgent-hide" onclick="window.AnlaFlow.openGame(true)" title="一鍵切到小遊戲畫面">🙈 一鍵隱藏</button>
+      <button type="button" class="urgent-expand" onclick="window.AnlaNextSteps.expandUrgent()" title="再打開「我需要幫助／找真人聊聊」等選項">展開求助選項</button>
       <div class="urgent-phones">
         <a href="tel:119" id="urgent119" class="btn-hotline">119 緊急救護</a>
         <a href="tel:110" class="btn-hotline">110 報案</a>
@@ -229,11 +231,28 @@
       <h2>🧩 數字推推樂</h2>
       <p id="puzzleStatus">把數字推回 1 到 8 的順序。</p>
       <div id="puzzleGrid" class="puzzle-grid"></div>
+      <p id="puzzleCheer" class="puzzle-cheer" aria-live="polite"></p>
       <div class="puzzle-actions">
         <button type="button" id="puzzleAgain" class="choice-chip">重新洗牌</button>
         <button type="button" id="puzzleBack" class="choice-chip">回到對話</button>
       </div>
       <p class="puzzle-help">需要時：<a href="tel:1925">1925</a>／<a href="tel:119">119</a></p>
+    </div>
+  </div>
+
+  <!-- 4-7-8 呼吸：在對話頁上方開啟，不離開頁面；關掉就回到原本的對話。 -->
+  <div id="breathOverlay" class="puzzle-overlay breath-overlay" hidden>
+    <div class="puzzle-card breath-card" role="dialog" aria-labelledby="breathTitle">
+      <h2 id="breathTitle">🫧 4-7-8 呼吸</h2>
+      <p class="breath-intro">吸氣 4 秒、停 7 秒、吐氣 8 秒，跟著圓圈做 4 輪就好。</p>
+      <div class="breath-stage"><div id="breathBall" class="breath-ball"><span id="breathCount" class="breath-count"></span></div></div>
+      <p id="breathPhase" class="breath-phase" aria-live="polite"></p>
+      <p id="breathHint" class="breath-hint"></p>
+      <p id="breathRound" class="breath-round"></p>
+      <div class="puzzle-actions">
+        <button type="button" id="breathAgain" class="choice-chip">再做一次</button>
+        <button type="button" id="breathClose" class="choice-chip">回到對話</button>
+      </div>
     </div>
   </div>
 
@@ -253,9 +272,17 @@
         <div class="privacy-note-title">
           🛡️ 資料使用說明
         </div>
-        <div class="privacy-note-body">
-          本原型會在伺服器加密暫存這次的對話紀錄、你說過的事件與感受等整理，以及你選填的資料，供你查看待分享摘要；暫存於最後使用後 24 小時失效，後續使用時清理。只有你明確同意分享後，摘要和到那時為止的完整對話紀錄才會存入受密碼保護的真人工作臺；之後再聊的內容不會自動分享。唯一例外：對話或自填檢核出現可能危及安全的內容時，系統會自動把必要的安全資訊（燈號、引發警訊的那幾句話、自填檢核結果、時間、鄉鎮）送到真人工作臺讓受過訓練的人員優先查看，不含你的暱稱、學校、聯絡方式與完整對話，送出時畫面會告訴你。若使用雲端 AI，對話文字會傳給該模型服務，請避免在對話中寫出姓名、電話或地址。學校與信箱可以不填；填寫不代表身分已驗證，也不會自動通知學校。目前沒有正式值班服務，若有立即危險，請直接使用下方電話求助。
-        </div>
+        <ol class="privacy-note-body privacy-note-list">
+          <li>本系統以聊天陪伴為主。</li>
+          <li>所有聊天內容皆不會留下紀錄，可以放心說 😌</li>
+          <li>如果你想談一談，別忘了身邊可以信任的人喔！</li>
+          <li>怕被別人看到對話嗎？快使用「🙈 一鍵隱藏」。</li>
+          <li>找不到人談一談嗎？也可以使用對話框旁的聯絡資訊喔！</li>
+        </ol>
+        <details class="privacy-note-more">
+          <summary>更詳細的說明</summary>
+          <p>對話只在伺服器加密暫存，最後使用 24 小時後自動清除；只有你按下同意分享，摘要才會交給輔導人員。唯一例外：對話或檢核出現可能危及安全的內容時，系統會把必要的安全資訊（不含暱稱、學校、聯絡方式與完整對話）交給受過訓練的人員優先關心，並在畫面上告訴你。若使用雲端 AI，對話文字會傳給該模型服務，請不要寫出姓名、電話或地址。有立即危險時，請直接撥下方電話。</p>
+        </details>
       </div>
 
       <form id="onboardingForm" onsubmit="submitOnboarding(event)">
@@ -263,7 +290,7 @@
           <input id="onboardingConsent" type="checkbox" required> 我已閱讀上方資料使用說明，了解本網站不會自動聯絡學校或撥打電話。
         </label>
 
-        <p style="font-size:.82rem;margin-bottom:1rem;">需要立即協助：<a href="tel:119">119 救護</a>／<a href="tel:110">110 報案</a>／<a href="tel:1925">1925 安心專線</a></p>
+        <p style="font-size:.82rem;margin-bottom:1rem;">需要立即協助：找身邊信任的人，或打 <a href="tel:119">119 救護</a>／<a href="tel:110">110 報案</a>／<a href="tel:1925">1925 安心專線</a></p>
 
         <div class="onboarding-grid">
           <div>

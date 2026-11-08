@@ -2,6 +2,9 @@
 (() => {
   let current = null;
   let urgentActive = false;
+  // Set by 「我很安全」: keep the small phone bar and the high-risk observation, but stop re-opening the four buttons
+  // on every reply (2026-11-08 feedback). The 「展開求助選項」 button on the bar still opens them.
+  let stayCompact = false;
   let busy = false;
   const byId = id => document.getElementById(id);
   const node = (tag, text, className = "") => {
@@ -35,7 +38,7 @@
   // reopen: a new red message after the student chose 「我很安全」 opens the full panel (four buttons) again.
   function showUrgentHelp(reopen = false) {
     const panel = byId("urgentHelpPanel");
-    if (urgentActive && !(reopen && panel.classList.contains("is-compact"))) return;
+    if (urgentActive && (stayCompact || !(reopen && panel.classList.contains("is-compact")))) return;
     urgentActive = true;
     panel.hidden = false;
     panel.classList.remove("is-compact");
@@ -437,6 +440,11 @@
     suggestInReply,
     openHelp,
     safetyNotice,
+    stayCompact() { stayCompact = true; },
+    expandUrgent() {
+      stayCompact = false;
+      showUrgentHelp(true);
+    },
     openReferral() {
       if (current?.consent_kind === "referral") render(current, true);
     },

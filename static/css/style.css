@@ -972,7 +972,12 @@ body.has-urgent-help { padding-top: var(--urgent-help-height, 125px); }
   background: #60a5fa; color: #fff; cursor: pointer; }
 .puzzle-empty { background: #e2e8f0; cursor: default; }
 .puzzle-actions { display: flex; gap: .5rem; justify-content: center; }
-@media (max-width: 640px) { .urgent-action-buttons { grid-template-columns: 1fr; } }
+.urgent-action-buttons:has(.urgent-sticker) { grid-template-columns: repeat(2, minmax(0, 170px)); }
+.urgent-sticker { padding: .25rem; border-color: #f1b8b0; line-height: 0; transition: transform .12s ease; }
+.urgent-sticker img { display: block; width: 100%; height: auto; border-radius: 8px; }
+.urgent-sticker:hover, .urgent-sticker:focus-visible { border-color: #dc2626; transform: translateY(-2px); }
+.urgent-sticker:active { transform: scale(.97); }
+@media (max-width: 640px) { .urgent-action-buttons:not(:has(.urgent-sticker)) { grid-template-columns: 1fr; } }
 .urgent-phones a[hidden] { display: none; }
 .puzzle-help { margin: .8rem 0 0; font-size: .78rem; color: #64748b; }
 /* The panel never grows past the screen: its own content scrolls (2026-10-31 live test: 911 px on a 744 px screen,
@@ -981,3 +986,32 @@ body.has-urgent-help { padding-top: var(--urgent-help-height, 125px); }
 .urgent-primary { position: relative; }
 .urgent-hide { position: absolute; top: .6rem; right: 1rem; border: 1px solid #fca5a5; background: #fff; color: #991b1b;
   border-radius: 999px; padding: .2rem .7rem; font: inherit; font-size: .85rem; cursor: pointer; }
+
+/* 2026-11-08 回饋：隱私說明條列、4-7-8 呼吸、遊戲打氣、黃／橙燈鼓勵、預約單 */
+.privacy-note-list { margin: 0; padding-left: 1.3rem; line-height: 1.8; }
+.privacy-note-more { margin-top: .5rem; font-size: .78rem; color: var(--text-secondary, #64748b); }
+.privacy-note-more summary { cursor: pointer; }
+.privacy-note-more p { margin-top: .35rem; line-height: 1.6; }
+.panel-fine { margin-top: .5rem; font-size: .74rem; line-height: 1.55; color: var(--text-secondary, #64748b); }
+.urgent-expand { display: none; }
+.urgent-help.is-compact .urgent-expand { display: inline-block; padding: .3rem .7rem; border-radius: 999px; border: 1px solid #dc2626;
+  background: #fff; color: #991b1b; font: inherit; font-size: .8rem; font-weight: 700; cursor: pointer; }
+.puzzle-cheer { min-height: 1.5rem; margin: 0 0 .6rem; font-weight: 700; color: #b45309; line-height: 1.5; }
+.breath-card { max-width: 360px; }
+.breath-intro { font-size: .88rem; color: #64748b; }
+.breath-stage { width: 220px; height: 220px; margin: .8rem auto; display: flex; align-items: center; justify-content: center; }
+.breath-ball { width: 200px; height: 200px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 35% 30%, #a7d8c9, #4f9d8a); box-shadow: 0 10px 30px rgba(0,0,0,.12);
+  transform: scale(.45); transition-property: transform; transition-timing-function: ease-in-out; }
+.breath-count { font-size: 2.2rem; font-weight: 800; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.3); }
+.breath-phase { font-size: 1.3rem; font-weight: 800; min-height: 2rem; margin: 0; }
+.breath-hint { color: #64748b; min-height: 1.5rem; margin: .2rem 0; }
+.breath-round { font-size: .8rem; color: #94a3b8; margin: 0 0 .6rem; }
+@media (prefers-reduced-motion: reduce) { .breath-ball { transition: none !important; } }
+.trusted-nudge { margin-top: .75rem; padding: .65rem .8rem; border-radius: 12px; background: #fffbeb; border: 1px solid #fcd34d;
+  color: #78350f; line-height: 1.65; white-space: normal; }
+.booking-title { margin: 0 0 .3rem; font-size: 1rem; }
+.booking-form { display: grid; gap: .25rem; margin: .5rem 0; }
+.booking-form label { font-size: .82rem; font-weight: 700; margin-top: .3rem; }
+.booking-form input, .booking-form textarea, .booking-form select { width: 100%; padding: .45rem .55rem; border: 1px solid #cbd5e1;
+  border-radius: 8px; font: inherit; font-size: .88rem; }

@@ -355,6 +355,10 @@ async function sendMessage() {
     window.AnlaNextSteps.update(data);
     if (replyBubble) window.AnlaNextSteps.suggestInReply(replyBubble, data.support_offer);
     if (replyBubble && data.offer_chat_checkin) window.AnlaFlow?.offerCheck(replyBubble);
+    // Not under a safety question (「你有想過結束自己的生命嗎？」): the nudge waits for a calmer yellow/orange turn.
+    if (replyBubble && data.encourage_trusted_people && !data.show_urgent_help && !data.style_overridden_by_safety) {
+      window.AnlaFlow?.encourageTrustedPeople(replyBubble, true);
+    }
     try {  // the counseling-office card must never turn a delivered reply into a send error
       window.AnlaSchoolReferral.setAvailable(data.school_referral_available);
       window.AnlaSchoolReferral.show(data.school_referral);
