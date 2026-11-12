@@ -48,6 +48,7 @@ from models.database import (
     STATUS_LABELS, STAFF_ROLES, authenticate_staff, backup_snapshot, count_active_admins, log_tool_run,
     recent_tool_runs, create_staff_user, list_staff_users, recent_audit_logs,
     update_staff_user, verify_audit_chain,
+    cast_ui_vote, ui_vote_tally,
     get_all_cases,
     flag_risk_after_consent,
     get_case_by_id,
@@ -312,7 +313,40 @@ def index():
     context = current_student_context()
     urgent = session.get("highest_risk") == "red" or (context or {}).get("draft", {}).get("risk_level") == "red"
     return render_template("index.html", csrf_token=csrf_token(), show_urgent_help=urgent,
-                           demo_mode=Config.PUBLIC_DEMO_MODE)
+                           demo_mode=Config.PUBLIC_DEMO_MODE, ui_vote_enabled=UI_VOTE_ENABLED)
+
+
+# ---- 介面版型投票：同一頁可切換幾種版型預覽，每台裝置一票（可改票），票數公開。----
+# 設 ANLA_UI_VOTE=0 可在定案後關閉投票按鈕與 API；版型切換本身仍保留。
+UI_VOTE_ENABLED = os.environ.get("ANLA_UI_VOTE", "1") != "0"
+UI_LAYOUTS = ("classic", "focus", "rail", "app")
+_VOTER_PATTERN = re.compile(r"^[A-Za-z0-9_-]{16,64}$")
+
+
+def _ui_voter_hash():
+    """Anonymous per-device id (random, kept in the browser) → salted hash; falls back to the session."""
+    voter = request.headers.get("X-UI-Voter", "")
+    if not _VOTER_PATTERN.match(voter):
+        voter = session.setdefault("ui_voter", secrets.token_urlsafe(18))
+    return hashlib.sha256((app.secret_key if isinstance(app.secret_key, str) else str(app.secret_key)).encode()
+                          + b"|ui-vote|" + voter.encode()).hexdigest()
+
+
+@app.route("/api/ui-vote", methods=["GET", "POST"])
+def ui_vote():
+    if not UI_VOTE_ENABLED:
+        return jsonify({"error": "投票已結束"}), 404
+    if request.method == "POST":
+        error = require_csrf()
+        if error:
+            return error
+        layout = (request.get_json(silent=True) or {}).get("layout")
+        if layout not in UI_LAYOUTS:
+            return jsonify({"error": "沒有這個版型"}), 400
+        cast_ui_vote(_ui_voter_hash(), layout)
+    tally = ui_vote_tally(_ui_voter_hash())
+    counts = {name: tally["counts"].get(name, 0) for name in UI_LAYOUTS}
+    return jsonify({"counts": counts, "total": sum(counts.values()), "mine": tally["mine"]})
 
 
 @app.route("/resources")

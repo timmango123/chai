@@ -1,0 +1,186 @@
+/* =====================================================================
+   學生首頁：可切換的介面版型（static/js/layout.js）＋版面投票面板
+   html[data-layout="classic|focus|rail|app"]；顏色一律沿用 themes.css 的 --t-* 變數，
+   所以每個版型都能搭配四套主題。層級：分頁列／投票 900、抽屜 950 < 對話框 1000 < 緊急求助 3000。
+   ===================================================================== */
+
+/* ---------- 共用：預設（原版）不顯示新增的元件 ---------- */
+.layout-header-bar, .layout-tabbar { display: none; }
+.layout-drawer[hidden] { display: none !important; }
+
+.layout-header-bar { align-items: center; gap: .5rem; }
+.layout-sos { display: flex; gap: .35rem; }
+.layout-sos a { display: inline-flex; align-items: center; min-height: 36px; padding: .25rem .7rem; border-radius: 999px;
+  border: 1px solid var(--t-danger-border, #fca5a5); background: var(--t-danger-btn-bg, #fff); color: var(--t-danger-text, #991b1b);
+  font-size: .85rem; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.layout-menu-button { min-height: 36px; padding: .25rem .85rem; border-radius: 999px; border: 1px solid var(--t-border-strong, #cbd5e1);
+  background: var(--t-surface, #fff); color: var(--t-text, #1e293b); font: inherit; font-size: .88rem; font-weight: 600; cursor: pointer; }
+.layout-menu-button:focus-visible, .layout-sos a:focus-visible, .layout-tabbar button:focus-visible,
+.ui-vote-toggle:focus-visible, .ui-vote-panel button:focus-visible, .layout-drawer button:focus-visible {
+  outline: 2px solid var(--t-focus, #4f46e5); outline-offset: 2px; }
+
+/* ---------- 抽屜（focus／rail：右側滑出；app：底部彈出） ---------- */
+.layout-drawer { position: fixed; inset: 0; z-index: 950; }
+.layout-drawer-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, .38); }
+.layout-drawer-panel { position: absolute; top: 0; right: 0; bottom: 0; width: min(400px, 92vw); display: flex; flex-direction: column;
+  background: var(--t-bg, #f8fafc); color: var(--t-text, #1e293b); box-shadow: -8px 0 24px rgba(0, 0, 0, .15);
+  animation: layout-slide-in .18s ease-out; }
+.layout-drawer-head { display: flex; justify-content: space-between; align-items: center; padding: .85rem 1rem;
+  border-bottom: 1px solid var(--t-border, #e2e8f0); background: var(--t-surface, #fff); }
+.layout-drawer-head h2 { margin: 0; font-size: 1.05rem; }
+.layout-drawer-close { width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 1.5rem; cursor: pointer; }
+.layout-drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 1rem; display: flex; flex-direction: column; gap: .9rem; }
+.layout-drawer-section { margin: .25rem 0 -.35rem; font-size: .78rem; font-weight: 700; letter-spacing: .05em; color: var(--t-muted, #64748b); }
+.layout-drawer-links { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+.layout-drawer-links .nav-item { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: .5rem;
+  border: 1px solid var(--t-border, #e2e8f0); border-radius: 12px; background: var(--t-surface, #fff); color: var(--t-text, #1e293b);
+  font-size: .9rem; text-align: center; }
+.layout-drawer .sidebar-panel { gap: .9rem; }
+.layout-drawer .student-header-meta { display: flex; flex-direction: column; align-items: stretch; gap: .5rem;
+  padding: .75rem; border: 1px solid var(--t-border, #e2e8f0); border-radius: 12px; background: var(--t-surface, #fff); }
+.layout-drawer .student-header-meta > * { width: 100%; text-align: left; font-size: .88rem !important; padding: .5rem .6rem !important; min-height: 40px; }
+.layout-drawer .student-header-meta select { width: 100%; }
+body.layout-drawer-open { overflow: hidden; }
+@keyframes layout-slide-in { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes layout-slide-up { from { transform: translateY(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .layout-drawer-panel { animation: none !important; } }
+
+/* ---------- 共用：三個新版型的頁首只留品牌＋找真人＋求助電話＋更多 ---------- */
+html[data-layout="focus"] .layout-header-bar,
+html[data-layout="rail"] .layout-header-bar,
+html[data-layout="app"] .layout-header-bar { display: flex; }
+html:not([data-layout="classic"]) .student-header-tools { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
+html:not([data-layout="classic"]) .student-header-tools .nav-links { gap: .35rem; }
+html:not([data-layout="classic"]) .brand-tag { display: none; }
+html:not([data-layout="classic"]) .student-page .chat-header .chat-region-badge { display: none; }
+
+/* =====================================================================
+   1) 極簡專注 focus — 參考 Chatbot UI / Vercel AI Chatbot：單欄置中
+   ===================================================================== */
+html[data-layout="focus"] .student-page .container { max-width: 860px; margin-top: 1rem; }
+html[data-layout="focus"] .student-page .student-grid { grid-template-columns: minmax(0, 1fr); }
+html[data-layout="focus"] .student-page .chat-card { height: calc(100dvh - 150px); min-height: 480px; border-radius: 20px; }
+html[data-layout="focus"] .student-page .chat-messages { padding: 1.5rem clamp(1rem, 4vw, 2.5rem); }
+html[data-layout="focus"] .quick-tags { flex-wrap: wrap; justify-content: center; overflow: visible; border-top: 0; }
+html[data-layout="focus"] .chat-card.is-chatting .quick-tags { display: none; }
+html[data-layout="focus"] .reply-style-area { padding-inline: clamp(.5rem, 3vw, 2rem); }
+html[data-layout="focus"] .chat-input-bar { margin: 0 clamp(.5rem, 3vw, 2rem) 1rem; border: 1px solid var(--t-border-strong, #cbd5e1);
+  border-radius: 999px; padding: .35rem .4rem .35rem .5rem; background: var(--t-input-bg, #fff); box-shadow: var(--t-shadow); }
+html[data-layout="focus"] .chat-input-bar input { border: 0 !important; box-shadow: none !important; background: transparent !important; }
+html[data-layout="focus"] .footer { margin-top: 1rem; }
+
+/* =====================================================================
+   2) 左側導覽 rail — 參考 Open WebUI / LibreChat：左窄欄＋右大對話框
+   ===================================================================== */
+html[data-layout="rail"] .student-page .container { max-width: 1320px; margin-top: 1rem; }
+html[data-layout="rail"] .student-page .student-grid { grid-template-columns: 270px minmax(0, 1fr); gap: 1rem; }
+html[data-layout="rail"] .student-page .sidebar-panel { order: -1; gap: .6rem; position: sticky; top: 80px; align-self: start;
+  max-height: calc(100dvh - 100px); overflow-y: auto; }
+html[data-layout="rail"] .student-page .chat-card { height: calc(100dvh - 130px); min-height: 520px; }
+html[data-layout="rail"] .sidebar-panel .panel-card { padding: .8rem .9rem; border-top-width: 1px !important; box-shadow: none; }
+html[data-layout="rail"] .sidebar-panel .panel-card h3 { font-size: .92rem; margin-bottom: .4rem; }
+html[data-layout="rail"] .sidebar-panel .panel-note,
+html[data-layout="rail"] .sidebar-panel .panel-fine,
+html[data-layout="rail"] .sidebar-panel .emergency-note { display: none; }
+html[data-layout="rail"] .sidebar-panel .panel-list { font-size: .8rem; margin: 0; }
+html[data-layout="rail"] .sidebar-panel .panel-list li:nth-child(n+2) { display: none; }
+html[data-layout="rail"] .sidebar-panel .relax-tools { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem; }
+html[data-layout="rail"] .sidebar-panel .relax-tools .choice-chip { margin: 0; font-size: .82rem; }
+html[data-layout="rail"] .sidebar-panel .emergency-strip { padding: .8rem .9rem; }
+html[data-layout="rail"] .sidebar-panel .hotline-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: .35rem; }
+html[data-layout="rail"] .sidebar-panel .btn-hotline { font-size: .78rem; padding: .4rem .3rem; margin: 0; text-align: center; }
+html[data-layout="rail"] .footer { margin-top: 1rem; }
+@media (max-width: 900px) {
+  html[data-layout="rail"] .student-page .student-grid { grid-template-columns: minmax(0, 1fr); }
+  html[data-layout="rail"] .student-page .sidebar-panel { order: 0; position: static; max-height: none; }
+}
+
+/* =====================================================================
+   3) 手機 App 風 app — 參考 Lobe Chat：整頁對話＋底部分頁列＋底部彈出抽屜
+   ===================================================================== */
+html[data-layout="app"] .student-page .container { max-width: 980px; margin: 0 auto; padding: 0; }
+html[data-layout="app"] .student-page .student-grid { grid-template-columns: minmax(0, 1fr); gap: 0; }
+html[data-layout="app"] .student-page .chat-card { height: calc(100dvh - 64px - 68px); min-height: 420px; border-radius: 0;
+  border-width: 0 1px; box-shadow: none; }
+html[data-layout="app"] .student-page .chat-header { padding-block: .5rem; }
+html[data-layout="app"] .quick-tags { scrollbar-width: none; }
+html[data-layout="app"] .chat-card.is-chatting .quick-tags { display: none; }
+html[data-layout="app"] .student-page .footer { display: none; }
+html[data-layout="app"] body.student-page { padding-bottom: 68px; }
+html[data-layout="app"] .layout-tabbar { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0;
+  z-index: 900; height: 68px; padding-bottom: env(safe-area-inset-bottom); background: var(--t-surface, #fff);
+  border-top: 1px solid var(--t-border, #e2e8f0); box-shadow: 0 -4px 16px rgba(0, 0, 0, .06); }
+html[data-layout="app"] .layout-tabbar button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem;
+  border: 0; background: transparent; color: var(--t-muted, #475569); font: inherit; font-size: 1.25rem; cursor: pointer; }
+html[data-layout="app"] .layout-tabbar button span { font-size: .72rem; font-weight: 600; }
+html[data-layout="app"] .layout-tabbar .layout-tab-help { color: var(--t-danger-text, #991b1b); }
+html[data-layout="app"] .layout-drawer-panel { top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 82dvh;
+  border-radius: 20px 20px 0 0; animation-name: layout-slide-up; box-shadow: 0 -8px 24px rgba(0, 0, 0, .18); }
+html[data-layout="app"] .layout-menu-button { display: none; }
+@media (min-width: 981px) {
+  html[data-layout="app"] .layout-drawer-panel { left: 50%; right: auto; width: 640px; transform: translateX(-50%); animation: none; }
+}
+
+/* 手機寬度：頁首擠得下品牌＋電話＋更多 */
+@media (max-width: 650px) {
+  html:not([data-layout="classic"]) .student-navbar { flex-wrap: nowrap; gap: .4rem; }
+  html:not([data-layout="classic"]) .brand-text h1 { font-size: .95rem; }
+  html:not([data-layout="classic"]) .student-header-tools { width: auto; }
+  html:not([data-layout="classic"]) #headerReferralButton { font-size: .78rem; padding: .3rem .45rem; }
+  html:not([data-layout="classic"]) .layout-sos a { padding: .2rem .5rem; font-size: .78rem; }
+  html[data-layout="focus"] .student-page .chat-card,
+  html[data-layout="rail"] .student-page .chat-card { height: calc(100dvh - 120px); }
+}
+
+/* =====================================================================
+   版面投票面板
+   ===================================================================== */
+.ui-vote-toggle { position: fixed; left: 1rem; bottom: 1rem; z-index: 900; min-height: 44px; padding: .5rem 1rem; border-radius: 999px;
+  border: 1px solid var(--t-border-strong, #cbd5e1); background: var(--t-surface, #fff); color: var(--t-text, #1e293b);
+  font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(0, 0, 0, .14); }
+html[data-layout="app"] .ui-vote-toggle { bottom: calc(68px + .75rem); }
+.ui-vote-panel { position: fixed; left: 1rem; bottom: 4.25rem; z-index: 900; width: min(380px, calc(100vw - 2rem));
+  max-height: calc(100dvh - 6rem); overflow-y: auto; padding: 1rem; border-radius: 16px; border: 1px solid var(--t-border, #e2e8f0);
+  background: var(--t-surface, #fff); color: var(--t-text, #1e293b); box-shadow: 0 12px 32px rgba(0, 0, 0, .2); }
+.ui-vote-panel[hidden] { display: none; }
+html[data-layout="app"] .ui-vote-panel { bottom: calc(68px + 4rem); max-height: calc(100dvh - 68px - 7rem); }
+.ui-vote-head { display: flex; justify-content: space-between; align-items: center; }
+.ui-vote-head h2 { margin: 0; font-size: 1.05rem; }
+.ui-vote-close { width: 36px; height: 36px; border: 0; background: transparent; color: inherit; font-size: 1.4rem; cursor: pointer; border-radius: 50%; }
+.ui-vote-intro { margin: .35rem 0 .75rem; font-size: .82rem; line-height: 1.6; color: var(--t-muted, #475569); }
+.ui-vote-list { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.ui-vote-item { padding: .7rem .8rem; border: 1px solid var(--t-border, #e2e8f0); border-radius: 12px; background: var(--t-surface-3, #f8fafc); }
+.ui-vote-item.is-current { border-color: var(--t-accent, #6366f1); box-shadow: 0 0 0 1px var(--t-accent, #6366f1) inset; }
+.ui-vote-row { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; }
+.ui-vote-name { font-weight: 700; }
+.ui-vote-count { font-size: .82rem; color: var(--t-muted, #475569); white-space: nowrap; }
+.ui-vote-lead { display: inline-block; margin-left: .2rem; padding: 0 .45rem; border-radius: 999px; font-size: .7rem;
+  background: var(--t-accent-soft, #e0e7ff); color: var(--t-accent-ink, #3730a3); vertical-align: middle; }
+.ui-vote-ref { font-size: .72rem; color: var(--t-muted, #64748b); margin-top: .1rem; }
+.ui-vote-desc { font-size: .82rem; line-height: 1.55; margin-top: .25rem; }
+.ui-vote-bar { height: 6px; margin: .5rem 0; border-radius: 999px; background: var(--t-border, #e2e8f0); overflow: hidden; }
+.ui-vote-bar span { display: block; height: 100%; background: var(--t-accent, #6366f1); transition: width .3s; }
+.ui-vote-actions { display: flex; gap: .4rem; }
+.ui-vote-actions button { flex: 1; min-height: 38px; border-radius: 10px; font: inherit; font-size: .85rem; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--t-border-strong, #cbd5e1); background: var(--t-surface, #fff); color: var(--t-text, #1e293b); }
+.ui-vote-actions button:disabled { cursor: default; opacity: .75; }
+.ui-vote-actions .ui-vote-cast { background: var(--t-accent-strong, #4f46e5); border-color: var(--t-accent-strong, #4f46e5); color: var(--t-on-accent, #fff); }
+.ui-vote-actions .ui-vote-cast[aria-pressed="true"] { background: var(--t-ok-bg, #f0fdf4); border-color: var(--t-ok-border, #86efac); color: var(--t-ok-text, #166534); }
+.ui-vote-panel.vote-off .ui-vote-cast, .ui-vote-panel.vote-off .ui-vote-count, .ui-vote-panel.vote-off .ui-vote-bar,
+.ui-vote-panel.vote-off .ui-vote-status { display: none; }
+/* 手機：投票鈕縮成右側小圓鈕，不擋住輸入框 */
+@media (max-width: 650px) {
+  .ui-vote-toggle, html[data-layout="app"] .ui-vote-toggle { left: auto; right: .5rem; top: 42%; bottom: auto; width: 44px; height: 44px;
+    padding: 0; overflow: hidden; white-space: nowrap; text-indent: 0; font-size: 0; }
+  .ui-vote-toggle::before { content: "🗳️"; font-size: 1.2rem; }
+  .ui-vote-panel, html[data-layout="app"] .ui-vote-panel { left: .5rem; right: .5rem; width: auto; top: 4.5rem; bottom: auto;
+    max-height: calc(100dvh - 9rem); }
+}
+.ui-vote-status { margin: .7rem 0 0; font-size: .82rem; color: var(--t-muted, #475569); }
+
+/* 一鍵隱藏／緊急求助畫面出現時，不讓投票與分頁列露出來 */
+body:has(#puzzleOverlay:not([hidden])) .ui-vote-toggle,
+body:has(#puzzleOverlay:not([hidden])) .ui-vote-panel,
+body:has(#urgentHelpPanel:not([hidden])) .ui-vote-toggle,
+body:has(#urgentHelpPanel:not([hidden])) .ui-vote-panel { display: none; }
+@media print { .ui-vote-toggle, .ui-vote-panel, .layout-tabbar, .layout-header-bar, .layout-drawer { display: none !important; } }

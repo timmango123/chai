@@ -126,9 +126,45 @@ def init_db():
         )
     """)
 
+    # 介面版型投票（UI 改版評選用）：只存匿名裝置代碼的雜湊與所選版型，不含任何學生資料。
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ui_votes (
+            voter_hash TEXT PRIMARY KEY,
+            layout TEXT NOT NULL,
+            voted_at TEXT NOT NULL
+        )
+    """)
+
     conn.commit()
     conn.execute("PRAGMA journal_mode=WAL")  # persistent per database file
     conn.close()
+
+
+def cast_ui_vote(voter_hash: str, layout: str) -> None:
+    """One vote per device; voting again changes that device's choice."""
+    conn = get_connection()
+    try:
+        conn.execute(
+            "INSERT INTO ui_votes (voter_hash, layout, voted_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(voter_hash) DO UPDATE SET layout = excluded.layout, voted_at = excluded.voted_at",
+            (voter_hash, layout, datetime.now().isoformat(timespec="seconds")),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def ui_vote_tally(voter_hash: str = "") -> dict:
+    conn = get_connection()
+    try:
+        rows = conn.execute("SELECT layout, COUNT(*) AS n FROM ui_votes GROUP BY layout").fetchall()
+        mine = None
+        if voter_hash:
+            row = conn.execute("SELECT layout FROM ui_votes WHERE voter_hash = ?", (voter_hash,)).fetchone()
+            mine = row["layout"] if row else None
+        return {"counts": {r["layout"]: r["n"] for r in rows}, "mine": mine}
+    finally:
+        conn.close()
 
 
 def get_setting(key: str, default: str = "") -> str:
