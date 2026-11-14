@@ -73,7 +73,11 @@
     menuButton && menuButton.setAttribute("aria-expanded", "true");
     if (scrollTarget) {
       var el = drawer.querySelector(scrollTarget);
-      if (el) el.scrollIntoView({ block: "start" });
+      if (el) {
+        var fold = el.closest("details");
+        if (fold) fold.open = true;
+        el.scrollIntoView({ block: "start" });
+      }
     } else {
       drawerBody.scrollTop = 0;
     }
@@ -150,8 +154,8 @@
       var tab = btn.getAttribute("data-tab");
       if (tab === "chat") { closeDrawer(); var input = document.getElementById("userInput"); input && input.focus(); }
       else if (tab === "check") { closeDrawer(); var open = document.querySelector(".sidebar-panel [data-open-checkin], [data-open-checkin]"); open && open.click(); }
-      else if (tab === "relax") openDrawer(".relax-tools");
-      else if (tab === "help") openDrawer(".emergency-strip");
+      else if (tab === "relax") openDrawer("#relaxFold");
+      else if (tab === "help") openDrawer("#emergencyFold");
       else openDrawer();
     });
     document.body.appendChild(tabbar);

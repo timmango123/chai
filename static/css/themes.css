@@ -282,6 +282,7 @@ html[data-theme] .urgent-help .next-step-panel { background: #ffffff; color: #1e
 /* ---------- 下一步、資料說明 ---------- */
 html[data-theme] .next-step-panel { background: var(--t-surface-3); border-color: var(--t-border-strong); color: var(--t-text); }
 html[data-theme] .choice-chip { background: var(--t-surface); color: var(--t-accent-ink); border-color: var(--t-border-strong); }
+html[data-theme] .sidebar-hide-btn { background: var(--t-surface); color: var(--t-accent-ink); border-color: var(--t-border-strong); }
 html[data-theme] .choice-note { color: var(--t-muted); }
 html[data-theme] .mood-chip { background: var(--t-surface); color: var(--t-text); border-color: var(--t-border-strong); }
 html[data-theme] .mood-chip:hover,

@@ -162,31 +162,22 @@
           </button>
         </div>
 
-        <!-- 流程圖「全程」：一鍵隱藏、笑話、白噪音、4-7-8 呼吸 -->
-        <div class="panel-card">
-          <h3>🌿 喘口氣</h3>
+        <!-- 一鍵隱藏：獨立一列，隨時一鍵切到小遊戲畫面 -->
+        <button type="button" id="hideButton" class="sidebar-hide-btn" title="一鍵切到小遊戲畫面，再按「回到對話」就回來">🙈 一鍵隱藏</button>
+
+        <!-- 喘口氣：笑話、4-7-8 呼吸、白噪音（可展開） -->
+        <details class="panel-card panel-fold" id="relaxFold">
+          <summary><h3>🌿 喘口氣</h3></summary>
           <div class="relax-tools">
-            <button type="button" id="hideButton" class="choice-chip" title="一鍵切到小遊戲畫面，再按「回到對話」就回來">🙈 一鍵隱藏</button>
             <button type="button" id="jokeButton" class="choice-chip">😄 笑話</button>
             <button type="button" id="breathButton" class="choice-chip" title="跟著圓圈做 4-7-8 呼吸，約 1 分半">🫧 4-7-8 呼吸</button>
             <button type="button" id="musicToggle" class="choice-chip" aria-pressed="false" title="平靜的白噪音，再按一次關閉">🌊 白噪音</button>
           </div>
-        </div>
+        </details>
 
-        <!-- 隱私與安全承諾卡 -->
-        <div class="panel-card">
-          <h3>🛡️ 安全與隱私承諾</h3>
-          <ul class="panel-list">
-            <li>對話不會留下紀錄，也不會外流。</li>
-            <li>怕被其他人看到，可使用<b>一鍵式隱藏</b>。</li>
-            <li>不需要馬上留下個人資料，可在需要求助時再填寫。</li>
-          </ul>
-          <p class="panel-fine">對話只在伺服器加密暫存，最後使用 24 小時後自動清除。唯一例外：如果對話出現可能危及安全的內容，系統會把必要的安全資訊（不含暱稱、學校與聯絡方式）交給受過訓練的人員關心你，並在畫面上告訴你。</p>
-        </div>
-
-        <!-- 在地求助專線 -->
-        <div class="emergency-strip">
-          <h4>🚨 需要幫忙時的聯絡方式</h4>
+        <!-- 在地求助專線（可展開） -->
+        <details class="emergency-strip panel-fold" id="emergencyFold">
+          <summary><h4>🚨 緊急聯絡</h4></summary>
           <p class="emergency-note">如果你現在處於極度痛苦或危急情況，請隨時直撥：</p>
           <div class="hotline-buttons">
             <a href="tel:1925" class="btn-hotline">📞 1925 安心專線</a>
@@ -196,7 +187,18 @@
             <a href="tel:119" class="btn-hotline">🚨 119 緊急救護</a>
             <a href="tel:110" class="btn-hotline">📞 110 報案</a>
           </div>
-        </div>
+        </details>
+
+        <!-- 隱私與安全承諾（可展開） -->
+        <details class="panel-card panel-fold">
+          <summary><h3>🛡️ 安全與隱私承諾</h3></summary>
+          <ul class="panel-list">
+            <li>對話不會留下紀錄，也不會外流。</li>
+            <li>怕被其他人看到，可使用<b>一鍵式隱藏</b>。</li>
+            <li>不需要馬上留下個人資料，可在需要求助時再填寫。</li>
+          </ul>
+          <p class="panel-fine">對話只在伺服器加密暫存，最後使用 24 小時後自動清除。唯一例外：如果對話出現可能危及安全的內容，系統會把必要的安全資訊（不含暱稱、學校與聯絡方式）交給受過訓練的人員關心你，並在畫面上告訴你。</p>
+        </details>
 
       </div>
 
@@ -346,9 +348,6 @@
       <a href="/resources">南投心理地圖</a>
     </div>
     <p>南投縣 2026 年山城數位黑客松暨第四屆麥克松科技競賽 參賽作品 ‧ 團隊名稱：AI 來尬聊</p>
-    <p class="footer-fine">
-      指導老師：林家平 ‧ 隊長：蔡睿恩 ‧ 隊員：何小侓、洪聖傑、李欣亮 ‧ 同德高中 / 台中女中 / 台中一中 跨校聯隊
-    </p>
   </footer>
 
   <!-- 身心電力檢核：BSRS-5 六題＋四個結構化問題（static/js/checkin.js）。學生只看到白話說明，不看到燈號與分數。 -->
