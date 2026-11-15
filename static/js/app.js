@@ -28,7 +28,10 @@ let currentReplyStyle = (() => {
 
 function renderReplyStyle() {
   document.querySelectorAll("#replyStyleBar .style-capsule").forEach(button => {
-    button.setAttribute("aria-pressed", String(button.dataset.style === currentReplyStyle));
+    const active = button.dataset.style === currentReplyStyle;
+    button.setAttribute("aria-pressed", String(active));
+    const label = document.getElementById("replyStyleCurrent");
+    if (active && label) label.textContent = button.textContent.replace(/^\S+\s*/, "");
   });
 }
 
@@ -68,7 +71,16 @@ function applyReplyStyleResponse(data) {
 document.addEventListener("DOMContentLoaded", () => {
   renderReplyStyle();
   document.querySelectorAll("#replyStyleBar .style-capsule").forEach(button => {
-    button.addEventListener("click", () => setReplyStyle(button.dataset.style));
+    button.addEventListener("click", () => {
+      setReplyStyle(button.dataset.style);
+      const menu = document.getElementById("replyStyleMenu");
+      if (menu) menu.open = false;
+    });
+  });
+  // 點選單外面就收起風格選單
+  document.addEventListener("click", event => {
+    const menu = document.getElementById("replyStyleMenu");
+    if (menu && menu.open && !menu.contains(event.target)) menu.open = false;
   });
 });
 

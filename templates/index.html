@@ -32,9 +32,9 @@
     <div class="student-header-tools">
       <div class="nav-links" aria-label="需要時再用的求助入口">
         <button type="button" id="newConversationButton" class="nav-item header-tool" onclick="startNewConversation()" title="清掉剛才的對話，從頭開始">開始新對話</button>
-        <button type="button" class="nav-item header-tool" data-open-checkin>身心檢核</button>
+        <button type="button" class="nav-item header-tool header-dup-of-side" data-open-checkin>身心檢核</button>
         <button type="button" id="headerDraftButton" class="nav-item header-tool" onclick="window.AnlaNextSteps.openNote()">寫求助字條</button>
-        <button type="button" id="headerReferralButton" class="nav-item header-tool help-request-button" onclick="window.AnlaNextSteps.openHelp()" title="想找輔導老師或真人一起想辦法時按這裡">🙋 找真人幫忙</button>
+        <button type="button" id="headerReferralButton" class="nav-item header-tool help-request-button header-dup-of-side" onclick="window.AnlaNextSteps.openHelp()" title="想找輔導老師或真人一起想辦法時按這裡">🙋 找真人幫忙</button>
         <button type="button" id="headerSchoolReferralButton" class="nav-item header-tool" onclick="window.AnlaSchoolReferral.open()" title="給學校輔導室的轉介單" hidden>🏫 輔導室轉介單</button>
         <a href="/resources" target="_blank" rel="noopener" class="nav-item">看南投資源</a>
       </div>
@@ -53,6 +53,18 @@
             <option value="paper">📒 極簡手札</option>
           </select>
         </label>
+        <!-- AI 回覆風格：選擇會記在這台裝置，並隨每則訊息送出；安全優先時伺服器會暫時改用穩定語氣。 -->
+        <details class="reply-style-menu" id="replyStyleMenu">
+          <summary title="選擇 AI 回覆的語氣">🎨 風格：<span id="replyStyleCurrent">溫馨陪伴</span></summary>
+          <div class="reply-style-bar" id="replyStyleBar" role="group" aria-labelledby="replyStyleLabel">
+            <span class="reply-style-label" id="replyStyleLabel">回覆風格</span>
+            <button type="button" class="style-capsule" data-style="warm" aria-pressed="true" title="溫暖、接納、不批判">🍵 溫馨陪伴</button>
+            <button type="button" class="style-capsule" data-style="lively" aria-pressed="false" title="輕快有朝氣，像朋友一起聊">⚡ 活潑元氣</button>
+            <button type="button" class="style-capsule" data-style="humor" aria-pressed="false" title="會接梗、看得懂玩笑，聊起來比較輕鬆">😆 幽默風趣</button>
+            <button type="button" class="style-capsule" data-style="rational" aria-pressed="false" title="冷靜有條理，幫你整理重點與下一步">🧭 沉穩理性</button>
+            <button type="button" class="style-capsule" data-style="listen_only" aria-pressed="false" title="只安靜聽你說，不追問也不給建議">🤫 純粹樹洞</button>
+          </div>
+        </details>
         <button type="button" id="installButton" class="header-chip" aria-haspopup="dialog" aria-controls="installDialog">📱 手機掃碼安裝</button>
       </div>
     </div>
@@ -108,7 +120,7 @@
           <span class="quick-tag" onclick="quickSend('最近和朋友或同學相處有些事情讓我在意。')">🫂 聊聊和朋友同學的相處</span>
           <span class="quick-tag" onclick="quickSend('我想說一說心裡的感覺')">🪞 聊聊對自己的感覺</span>
           <span class="quick-tag" onclick="quickSend('最近和家人相處有些壓力，我想聊聊。')">🏠 聊聊家人相處的煩惱</span>
-          <span class="quick-tag quick-tag-featured" onclick="window.AnlaFlow.startCheck()">🔋 安啦，陪我聊聊身心電力</span>
+          <!-- 身心檢核已放在左側功能欄，這裡不再重複放入口。 -->
         </div>
 
         <!-- 語音辨識錄音中提示條 -->
@@ -118,16 +130,8 @@
           <button onclick="stopVoiceRecognition()" style="background: none; border: none; color: #b91c1c; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">取消</button>
         </div>
 
-        <!-- AI 回覆風格：選擇會記在這台裝置，並隨每則訊息送出；安全優先時伺服器會暫時改用穩定語氣。 -->
-        <div class="reply-style-area">
-          <div class="reply-style-bar" id="replyStyleBar" role="group" aria-labelledby="replyStyleLabel">
-            <span class="reply-style-label" id="replyStyleLabel">回覆風格</span>
-            <button type="button" class="style-capsule" data-style="warm" aria-pressed="true" title="溫暖、接納、不批判">🍵 溫馨陪伴</button>
-            <button type="button" class="style-capsule" data-style="lively" aria-pressed="false" title="輕快有朝氣，像朋友一起聊">⚡ 活潑元氣</button>
-            <button type="button" class="style-capsule" data-style="humor" aria-pressed="false" title="會接梗、看得懂玩笑，聊起來比較輕鬆">😆 幽默風趣</button>
-            <button type="button" class="style-capsule" data-style="rational" aria-pressed="false" title="冷靜有條理，幫你整理重點與下一步">🧭 沉穩理性</button>
-            <button type="button" class="style-capsule" data-style="listen_only" aria-pressed="false" title="只安靜聽你說，不追問也不給建議">🤫 純粹樹洞</button>
-          </div>
+        <!-- 回覆風格已移到頁首「🎨 風格」選單；安全優先的提示仍顯示在輸入框上方。 -->
+        <div class="reply-style-area reply-style-note-only">
           <p id="styleSafetyNote" class="style-safety-note" role="status" aria-live="polite" hidden></p>
         </div>
 
@@ -145,29 +149,28 @@
 
       </div>
 
-      <!-- 右側：功能引導與南投緊急專線卡片 -->
+      <!-- 功能側欄：寬螢幕時顯示在對話框左邊（CSS order），手機時排在對話下方。
+           順序依學生討論的草圖：一鍵隱藏 → 身心檢核 → 喘口氣 → 資訊 → 真人求助 → 緊急聯絡。 -->
       <div class="sidebar-panel">
-        
-        <!-- 身心電力自然盤點卡 -->
-        <div class="panel-card" style="border-top: 4px solid var(--primary);">
-          <h3>🔋 身心電力檢核</h3>
-          <p class="panel-note">
-            6 題簡式健康量表（BSRS-5）加 4 個簡單問題，約 2–3 分鐘。不是診斷，只是幫你看看最近的狀態。
-          </p>
-          <button type="button" class="btn-primary-action" data-open-checkin style="margin-top: 0.5rem;">
-            開始 3 分鐘檢核 📝
+
+        <!-- 一鍵隱藏：放最上面，隨時一鍵切到小遊戲畫面 -->
+        <button type="button" id="hideButton" class="sidebar-hide-btn side-tile" title="一鍵切到小遊戲畫面，再按「回到對話」就回來">
+          <span class="side-tile-icon" aria-hidden="true">🙈</span>
+          <span class="side-tile-text"><b>一鍵隱藏</b><small>怕被看到就按這裡</small></span>
+        </button>
+
+        <!-- 身心電力檢核 -->
+        <div class="side-tile side-tile-check">
+          <button type="button" class="side-tile-main" data-open-checkin title="6 題簡式健康量表（BSRS-5）加 4 個簡單問題。不是診斷，只是幫你看看最近的狀態。">
+            <span class="side-tile-icon" aria-hidden="true">📋</span>
+            <span class="side-tile-text"><b>身心檢核</b><small>（約 3 分鐘）</small></span>
           </button>
-          <button type="button" class="choice-chip" onclick="window.AnlaFlow.startCheck()" style="margin-top: 0.5rem;">
-            用聊天的方式聊聊 💬
-          </button>
+          <button type="button" class="side-tile-sub" onclick="window.AnlaFlow.startCheck()">💬 或用聊天的方式聊聊</button>
         </div>
 
-        <!-- 一鍵隱藏：獨立一列，隨時一鍵切到小遊戲畫面 -->
-        <button type="button" id="hideButton" class="sidebar-hide-btn" title="一鍵切到小遊戲畫面，再按「回到對話」就回來">🙈 一鍵隱藏</button>
-
         <!-- 喘口氣：笑話、4-7-8 呼吸、白噪音（可展開） -->
-        <details class="panel-card panel-fold" id="relaxFold">
-          <summary><h3>🌿 喘口氣</h3></summary>
+        <details class="panel-card panel-fold side-tile" id="relaxFold">
+          <summary><span class="side-tile-icon" aria-hidden="true">🌱</span><span class="side-tile-text"><h3>喘口氣</h3><small>放鬆一下</small></span></summary>
           <div class="relax-tools">
             <button type="button" id="jokeButton" class="choice-chip">😄 笑話</button>
             <button type="button" id="breathButton" class="choice-chip" title="跟著圓圈做 4-7-8 呼吸，約 1 分半">🫧 4-7-8 呼吸</button>
@@ -175,9 +178,27 @@
           </div>
         </details>
 
+        <!-- 資訊：隱私承諾＋南投資源（可展開） -->
+        <details class="panel-card panel-fold side-tile" id="infoFold">
+          <summary><span class="side-tile-icon" aria-hidden="true">🛡️</span><span class="side-tile-text"><h3>資訊</h3><small>隱私承諾與南投資源</small></span></summary>
+          <ul class="panel-list">
+            <li>對話不會留下紀錄，也不會外流。</li>
+            <li>怕被其他人看到，可使用<b>一鍵式隱藏</b>。</li>
+            <li>不需要馬上留下個人資料，可在需要求助時再填寫。</li>
+          </ul>
+          <p class="panel-fine">對話只在伺服器加密暫存，最後使用 24 小時後自動清除。唯一例外：如果對話出現可能危及安全的內容，系統會把必要的安全資訊（不含暱稱、學校與聯絡方式）交給受過訓練的人員關心你，並在畫面上告訴你。</p>
+          <a href="/resources" target="_blank" rel="noopener" class="choice-chip side-tile-link">🗺️ 看南投資源</a>
+        </details>
+
+        <!-- 真人求助 -->
+        <button type="button" id="sidebarHelpButton" class="side-tile side-tile-help" onclick="window.AnlaNextSteps.openHelp()" title="想找輔導老師或真人一起想辦法時按這裡">
+          <span class="side-tile-icon" aria-hidden="true">🙋</span>
+          <span class="side-tile-text"><b>真人求助</b><small>找輔導老師或真人幫忙</small></span>
+        </button>
+
         <!-- 在地求助專線（可展開） -->
-        <details class="emergency-strip panel-fold" id="emergencyFold">
-          <summary><h4>🚨 緊急聯絡</h4></summary>
+        <details class="emergency-strip panel-fold side-tile" id="emergencyFold">
+          <summary><span class="side-tile-icon" aria-hidden="true">🚨</span><span class="side-tile-text"><h4>緊急聯絡資料</h4><small>1925／119 等專線</small></span></summary>
           <p class="emergency-note">如果你現在處於極度痛苦或危急情況，請隨時直撥：</p>
           <div class="hotline-buttons">
             <a href="tel:1925" class="btn-hotline">📞 1925 安心專線</a>
@@ -189,16 +210,16 @@
           </div>
         </details>
 
-        <!-- 隱私與安全承諾（可展開） -->
-        <details class="panel-card panel-fold">
-          <summary><h3>🛡️ 安全與隱私承諾</h3></summary>
-          <ul class="panel-list">
-            <li>對話不會留下紀錄，也不會外流。</li>
-            <li>怕被其他人看到，可使用<b>一鍵式隱藏</b>。</li>
-            <li>不需要馬上留下個人資料，可在需要求助時再填寫。</li>
-          </ul>
-          <p class="panel-fine">對話只在伺服器加密暫存，最後使用 24 小時後自動清除。唯一例外：如果對話出現可能危及安全的內容，系統會把必要的安全資訊（不含暱稱、學校與聯絡方式）交給受過訓練的人員關心你，並在畫面上告訴你。</p>
-        </details>
+        <!-- 側欄底部的小芽裝飾（純裝飾） -->
+        <svg class="side-sprouts" viewBox="0 0 240 120" aria-hidden="true" focusable="false">
+          <path d="M0 120 Q60 70 130 92 T240 80 V120Z" class="sprout-hill"/>
+          <path d="M70 100 V58" class="sprout-stem"/>
+          <ellipse cx="56" cy="50" rx="16" ry="9" transform="rotate(-25 56 50)" class="sprout-leaf"/>
+          <ellipse cx="84" cy="46" rx="18" ry="10" transform="rotate(25 84 46)" class="sprout-leaf"/>
+          <path d="M150 96 V74" class="sprout-stem"/>
+          <ellipse cx="141" cy="70" rx="10" ry="6" transform="rotate(-25 141 70)" class="sprout-leaf"/>
+          <ellipse cx="159" cy="68" rx="11" ry="6" transform="rotate(25 159 68)" class="sprout-leaf"/>
+        </svg>
 
       </div>
 

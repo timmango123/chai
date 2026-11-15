@@ -184,3 +184,91 @@ body:has(#puzzleOverlay:not([hidden])) .ui-vote-panel,
 body:has(#urgentHelpPanel:not([hidden])) .ui-vote-toggle,
 body:has(#urgentHelpPanel:not([hidden])) .ui-vote-panel { display: none; }
 @media print { .ui-vote-toggle, .ui-vote-panel, .layout-tabbar, .layout-header-bar, .layout-drawer { display: none !important; } }
+
+/* =====================================================================
+   v1.3 介面調整（依學生手繪草圖）：
+   - 功能側欄移到對話框左邊，順序：一鍵隱藏／身心檢核／喘口氣／資訊／真人求助／緊急聯絡
+   - 回覆風格改成頁首「🎨 風格」下拉選單
+   - 寬螢幕時頁首不再重複放「身心檢核」「找真人幫忙」（側欄已有）
+   ===================================================================== */
+@media (min-width: 901px) {
+  html[data-layout="classic"] .student-page .container { max-width: 1280px; }
+  html[data-layout="classic"] .student-page .student-grid { grid-template-columns: 250px minmax(0, 1fr); gap: 1.25rem; }
+  html[data-layout="classic"] .student-page .sidebar-panel { order: -1; gap: .75rem; position: sticky; top: 84px; align-self: start;
+    max-height: calc(100dvh - 104px); overflow-y: auto; scrollbar-width: thin; padding: .25rem .25rem .25rem 0; }
+  html[data-layout="classic"] .student-page .chat-card { height: calc(100dvh - 130px); min-height: 540px; }
+  html[data-layout="classic"] .header-dup-of-side,
+  html[data-layout="rail"] .header-dup-of-side { display: none; }
+}
+
+/* ---------- 側欄方塊 ---------- */
+.side-tile { position: relative; width: 100%; text-align: left; font: inherit; }
+button.side-tile, .side-tile-main, .side-tile > summary {
+  display: flex; align-items: center; gap: .7rem; width: 100%; min-height: 64px; padding: .7rem .9rem; cursor: pointer; }
+button.side-tile, .side-tile-check { border-radius: var(--t-radius, 16px); border: 1px solid var(--t-border, #e2e8f0);
+  background: var(--t-surface, #fff); color: var(--t-text, #1e293b); box-shadow: var(--t-shadow); }
+html[data-theme] .sidebar-panel .side-tile.panel-card,
+html[data-theme] .sidebar-panel .side-tile.emergency-strip { padding: 0; margin: 0; }
+.side-tile.panel-fold[open] > summary { margin-bottom: 0; }
+.side-tile.panel-fold > :not(summary) { margin-left: .9rem; margin-right: .9rem; }
+.side-tile.panel-fold[open] > :last-child { margin-bottom: .9rem; }
+.side-tile-icon { flex: 0 0 auto; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px;
+  font-size: 1.3rem; background: var(--t-surface-2, #f1f5f9); }
+.side-tile-text { display: flex; flex-direction: column; align-items: flex-start; text-align: left; min-width: 0; line-height: 1.3; flex: 1; }
+.side-tile-text b, .side-tile-text h3, .side-tile-text h4 { margin: 0; font-size: 1.05rem; font-weight: 800; color: inherit; }
+.side-tile-text small { font-size: .78rem; color: var(--t-muted, #64748b); font-weight: 500; }
+.side-tile-main { border: 0; background: transparent; color: inherit; border-radius: inherit; }
+.side-tile-sub { display: block; width: calc(100% - 1.4rem); margin: 0 .7rem .65rem; padding: .35rem .5rem; border: 0; border-radius: 10px;
+  background: transparent; color: var(--t-muted, #475569); font: inherit; font-size: .8rem; text-align: left; cursor: pointer; }
+.side-tile-sub:hover { background: var(--t-surface-3, #f8fafc); color: var(--t-text, #1e293b); }
+button.side-tile:hover, .side-tile-main:hover, .side-tile > summary:hover { filter: brightness(.98); }
+button.side-tile:focus-visible, .side-tile-main:focus-visible, .side-tile-sub:focus-visible, .side-tile > summary:focus-visible {
+  outline: 2px solid var(--t-focus, #4f46e5); outline-offset: 2px; }
+
+/* 身心檢核、喘口氣：柔和綠色卡片（參考圖樣） */
+html[data-theme] .sidebar-panel .side-tile-check,
+html[data-theme] .sidebar-panel #relaxFold { background: var(--t-ok-bg, #f0fdf4); border-color: var(--t-ok-border, #bbf7d0); color: var(--t-ok-text, #166534); }
+.side-tile-check .side-tile-icon, #relaxFold .side-tile-icon { background: var(--t-surface, #fff); }
+.side-tile-check .side-tile-text small, #relaxFold .side-tile-text small { color: var(--t-ok-text, #166534); opacity: .85; }
+#relaxFold .relax-tools { display: flex; flex-wrap: wrap; gap: .4rem; }
+#relaxFold .relax-tools .choice-chip { margin: 0; font-size: .85rem; padding: .45rem .7rem; }
+/* 一鍵隱藏：沿用原本強調色字 */
+html[data-theme] .sidebar-panel #hideButton { color: var(--t-accent-ink); border-color: var(--t-border-strong); }
+/* 真人求助：強調色 */
+html[data-theme] .sidebar-panel .side-tile-help { background: var(--t-accent-soft, #eef2ff); border-color: var(--t-accent, #6366f1); color: var(--t-accent-ink, #3730a3); }
+.side-tile-help .side-tile-icon { background: var(--t-surface, #fff); }
+/* 緊急聯絡：維持紅色系 */
+html[data-theme] .sidebar-panel #emergencyFold { color: var(--t-danger-text, #991b1b); }
+#emergencyFold .side-tile-icon { background: var(--t-danger-btn-bg, #fff); }
+#emergencyFold .side-tile-text small { color: var(--t-danger-text, #991b1b); opacity: .8; }
+#infoFold .side-tile-link { display: inline-block; margin-top: .6rem; font-size: .85rem; padding: .4rem .75rem; }
+#infoFold .panel-list { margin-top: .2rem; }
+
+/* 側欄底部小芽（純裝飾，主題色） */
+.side-sprouts { display: block; width: 100%; height: auto; margin-top: .25rem; opacity: .9; }
+.side-sprouts .sprout-hill { fill: var(--t-ok-bg, #ecfdf5); stroke: var(--t-ok-border, #bbf7d0); }
+.side-sprouts .sprout-stem { stroke: var(--t-ok-border, #86efac); stroke-width: 4; stroke-linecap: round; fill: none; }
+.side-sprouts .sprout-leaf { fill: var(--t-ok-border, #86efac); }
+.layout-drawer .side-sprouts { display: none; }
+@media (max-width: 900px) { .side-sprouts { display: none; } }
+
+/* ---------- 頁首「🎨 風格」下拉選單 ---------- */
+.reply-style-menu { position: relative; }
+.reply-style-menu > summary { list-style: none; display: inline-flex; align-items: center; gap: .15rem; cursor: pointer; white-space: nowrap;
+  font-size: .75rem; padding: .2rem .6rem; border-radius: 999px; border: 1px solid var(--t-border-strong, #cbd5e1);
+  background: var(--t-surface, #fff); color: var(--t-text, #1e293b); min-height: 30px; }
+.reply-style-menu > summary::-webkit-details-marker { display: none; }
+.reply-style-menu > summary::after { content: "▾"; margin-left: .25rem; opacity: .7; }
+.reply-style-menu[open] > summary { background: var(--t-accent-soft, #eef2ff); color: var(--t-accent-ink, #3730a3); border-color: var(--t-accent, #6366f1); }
+.reply-style-menu > summary:focus-visible { outline: 2px solid var(--t-focus, #4f46e5); outline-offset: 2px; }
+.reply-style-menu .reply-style-bar { position: absolute; right: 0; top: calc(100% + .4rem); z-index: 960; width: 220px;
+  display: flex; flex-direction: column; align-items: stretch; gap: .35rem; padding: .7rem;
+  border-radius: 14px; border: 1px solid var(--t-border, #e2e8f0); background: var(--t-surface, #fff); box-shadow: 0 12px 28px rgba(0, 0, 0, .16); }
+.reply-style-menu .reply-style-label { width: auto; margin: 0 0 .1rem; }
+.reply-style-menu .style-capsule { width: 100%; text-align: left; justify-content: flex-start; }
+.layout-drawer .reply-style-menu .reply-style-bar { position: static; width: auto; box-shadow: none; margin-top: .4rem; }
+.reply-style-note-only { padding-block: 0; border-top: 0; }
+.reply-style-note-only:not(:has(.style-safety-note:not([hidden]))) { display: none; }
+@media (max-width: 650px) {
+  .reply-style-menu .reply-style-bar { right: auto; left: 0; }
+}
