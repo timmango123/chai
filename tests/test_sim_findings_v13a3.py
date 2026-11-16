@@ -61,3 +61,29 @@ class ResumeNoticeTests(RouteBase):
         self.assertFalse(client.get("/api/chat/state").json["has_conversation"])
         client.post("/api/chat", headers=headers, json={"message": "最近和同學吵架，心情有點悶"})
         self.assertTrue(client.get("/api/chat/state").json["has_conversation"])
+
+
+class NotFoundAndIconTests(RouteBase):
+    def test_a_mistyped_page_gets_a_way_back_and_the_help_lines(self):
+        client, _ = self.student()
+        res = client.get("/no-such-page")
+        html = res.get_data(as_text=True)
+        self.assertEqual(res.status_code, 404)
+        self.assertIn("找不到這個頁面", html)
+        self.assertIn('href="/"', html)
+        self.assertIn("tel:1925", html)
+        self.assertIn("tel:119", html)
+        self.assertNotIn("The requested URL", html)
+
+    def test_an_unknown_api_path_answers_in_json(self):
+        client, _ = self.student()
+        res = client.get("/api/no-such-thing")
+        self.assertEqual(res.status_code, 404)
+        self.assertIn("error", res.get_json())
+
+    def test_the_site_icon_is_served(self):
+        client, _ = self.student()
+        res = client.get("/favicon.ico")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.mimetype, "image/png")
+        res.close()

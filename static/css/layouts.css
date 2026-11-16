@@ -360,3 +360,10 @@ html[data-layout="app"] .layout-tabbar button span { font-size: .8rem; }
   .ui-vote-panel { max-height: calc(100dvh - var(--chat-top, 130px) - 4.75rem); }
   html[data-layout="app"] .ui-vote-panel { max-height: calc(100dvh - var(--chat-top, 64px) - 68px - 4.5rem); }
 }
+
+/* 手機檢核：五個程度的文字不貼邊（「完全沒有」「非常厲害」四個字要留一點空隙）。 */
+@media (max-width: 520px) {
+  #checkinItems .checkin-options { gap: .2rem; }
+  #checkinItems .checkin-options label { padding: .35rem 0; font-size: .74rem; letter-spacing: -.02em; }
+  .checkin-dialog .install-dialog-body { padding-inline: .9rem; }
+}

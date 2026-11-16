@@ -308,6 +308,25 @@ def database_busy(exc):
                     "show_urgent_help": session.get("highest_risk") == "red"}), 503
 
 
+@app.errorhandler(404)
+def page_not_found(exc):
+    """A mistyped address shows a page in the site's own words with a way back and the help lines, not the
+    server's default English text (2026-11-16 simulation). API and static paths keep a short machine answer."""
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "找不到這個功能"}), 404
+    if request.path.startswith("/static/"):
+        return "Not Found", 404
+    return render_template("not_found.html"), 404
+
+
+@app.route("/favicon.ico")
+def favicon():
+    # Browsers ask for this path by themselves; without it every page load logged a 404.
+    response = send_from_directory(os.path.join(app.static_folder, "icons"), "icon-192.png", mimetype="image/png")
+    response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
+
+
 @app.route("/")
 def index():
     context = current_student_context()
