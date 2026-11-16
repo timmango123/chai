@@ -303,7 +303,7 @@ FAMILY_STRAIN = (r"(?:爸媽|爸爸|媽媽|家人|父母).{0,12}(?:吵架|罵我
                  r"|家裡.{0,4}(?:很亂|待不下去|好可怕)")
 PEER_REJECTION = r"沒(?:有)?人要我|被排擠|被霸凌|沒有朋友|同學都(?:不理我|笑我|討厭我)|被孤立|格格不入"
 NO_SUPPORT = (r"(?:沒有人|沒人|找不到人|不知道(?:要)?找誰).{0,10}(?:可以)?(?:說|聊|幫|講|理解)"
-              r"|不敢(?:跟|告訴)(?:任何人|別人|大人|家人|老師|爸媽)|只能自己(?:撐|扛)")
+              r"|不敢(?:跟|告訴)(?:任何人|別人|大人|家人|老師|爸媽)|只能自己(?:撐|扛)|沒(?:有)?人(?:可以|能|會)?陪我")
 CONCERNING_PRIORS = {"sleep": ("reported_difficulty",), "daily_function": ("reported_impact",),
                      "support_system": ("difficulty_seeking_support",), "safety": ("requires_human_review", "clarification_needed")}
 
@@ -341,7 +341,8 @@ def observe_safety(message, triage, previous=None, hints=None, hour=None):
             # risk_cue picks the wording (peer bullying, leaked images, affect streak); fresh_level is what THIS
             # message shows on its own, for the student-facing safety mode (night review and carry-overs excluded).
             "risk_cue": "", "night_review": False, "fresh_level": "green", "thoughts_confirmed": False,
-            "check_carries": 0, "hopelessness": dict(previous.get("hopelessness") or {})}
+            "check_carries": 0, "hopelessness": dict(previous.get("hopelessness") or {}),
+            "implicit_cues": int(previous.get("implicit_cues") or 0)}
     candidates = []
 
     def add(kind, signal, danger, evidence, floor, subject="self", basis=(), cue="", carry=False):
@@ -355,7 +356,8 @@ def observe_safety(message, triage, previous=None, hints=None, hour=None):
         evidence = "；".join(rules.get("red_flags", []) or rules.get("orange_flags", []))
         kind = "abuse" if re.search(r"被打(?!槍)|家暴", evidence) else "suicide" if re.search(
             r"想死|自殺|自傷|不想活|活不下去|活著|死亡|遺書|吞|藥|跳樓|跳橋|燒炭|上吊|不想醒|不要醒|結束(?:生命|自己|這一切)"
-            r"|離開這個世界|不在了|消失|工具", evidence) else "self_harm"
+            r"|離開這個世界|不在了|消失|工具|死|存在|出生|生下來|了斷|了結|尋短|永別|來生|下輩子|跳下去|往下跳|想跳|想衝|車撞|撞我"
+            r"|離開(?:這個?)?(?:世界|人世|人間)|suicid", evidence) else "self_harm"
         add(kind, "direct", "imminent" if current == "red" else "possible", evidence, current,
             basis=triage.get("theoretical_basis") or ("PSY-01",))
 
@@ -389,12 +391,22 @@ def observe_safety(message, triage, previous=None, hints=None, hour=None):
         add("suicide", "direct", danger, evidence, "red" if danger == "imminent" else "orange", "other", ("SOC-05", "PSY-01"))
         risk["secondary_trauma_risk"] = True
 
-    ambiguous = r"撐不下去|受不了了|不想撐了|快撐不住"
+    ambiguous = r"撐不下去|受不了了|不想(?:再)?撐了?|撐不住"
     indirect = (r"少了我.{0,4}也沒差|沒有我.{0,8}(?:更好|沒差)|(?:如果|希望).{0,5}(?:不要|不再)醒來|希望睡了就不醒|不想醒來"
                 # 2026-10-31 詞庫：計畫書「隱晦與情境詞」，輕度確認並交給 AI 二審。
                 r"|不想再醒來|永遠睡著|(?:好|只|很)?想(?:要)?解脫|想就這樣消失|活著(?:好|很|真的)?沒(?:有)?意義"
                 r"|人生(?:好|很|真的)?沒(?:有)?意義|不想(?:再)?繼續了|死了也(?:不會)?(?:有人|沒人|沒有人)在乎"
                 r"|(?:想)?去另一個世界|(?:想)?去當天使"
+                # 2026-11-17 回饋：原本完全沒反應（綠色）的隱晦、網路說法，先輕度確認一次。
+                r"|生無可戀|了無生趣|萬念俱灰|活著(?:到底)?(?:要)?(?:幹嘛|幹麻|幹什麼|做什麼|有什麼(?:意義|意思|用)|為了什麼)"
+                r"|活著(?:好|很|真的)?沒(?:有)?(?:意思|用)|(?:想|好想)結束(?:了|這種(?:生活|日子|人生))|不想再這樣(?:下去|過)"
+                r"|人生(?:已經)?沒(?:有)?希望|(?:永遠|一直)睡下去|睡(?:了|著)?(?:就)?(?:不要|不用|別)(?:再)?(?:起來|醒)"
+                r"|(?:希望|但願)明天不(?:要|會)(?:來|到)(?!學校|上課|上班|補習)|沒有明天(?:就|該有多)好"
+                r"|登出人生|人生登出|從人生(?:中)?畢業|人生畢業|人生.{0,10}砍掉重練|砍掉重練.{0,4}人生|重開人生|人生重開"
+                r"|想重開(?=$|[\s，,。！!了啦])|下輩子不(?:要|想)(?:再)?當人|(?:重新)?投胎(?:算了|好了)|想(?:去)?(?:重新)?投胎"
+                r"|想去(?:找|陪)(?:過世|天上|天堂|死去|已經不在)的?|去(?:天上|天堂)(?:找|陪)"
+                r"|想讓(?:一切|痛苦|這一切)(?:都)?(?:停下來|停止|結束)|沒(?:有)?人(?:會)?(?:在意|在乎|管)我(?:的)?死活"
+                r"|消失了?也(?:沒人|不會有人|沒有人)(?:發現|在意|在乎)|世界(?:上)?少(?:了)?我(?:一個)?也沒差|反正(?:我)?也活不久"
                 r"|" + PASSIVE_DEATH_WISH)
     for pattern, signal in ((ambiguous, "ambiguous"), (indirect, "indirect")):
         for _, evidence in _affirmative_matches(pattern, scan):
@@ -412,6 +424,18 @@ def observe_safety(message, triage, previous=None, hints=None, hour=None):
         combined = ("pb" in ipts and "tb" in ipts) or ("entrapment" in ipts and ("pb" in ipts or "tb" in ipts))
         basis = (["PSY-02"] if hits.keys() & {"pb", "tb"} or combined else []) + (["PSY-03"] if "entrapment" in ipts else [])
         add("suicide", "indirect", "possible", next(iter(hits.values())), "orange" if combined else "yellow", basis=basis)
+
+    # 2026-11-17 feedback (too slow to notice): a second implicit or ambiguous wording about dying in the same
+    # conversation is not answered with another yellow check; it goes to orange for human review (SIG-02: a miss
+    # costs more than a false alarm). Hyperbole and the affect-streak prompt are added later and do not count.
+    implicit = [c for c in candidates if c["risk_type"] == "suicide" and c["risk_signal"] in ("ambiguous", "indirect")]
+    if implicit:
+        risk["implicit_cues"] += 1
+        if risk["implicit_cues"] >= 2:
+            for candidate in implicit:
+                if candidate["minimum_level"] == "yellow":
+                    candidate["minimum_level"] = "orange"
+                    candidate["theoretical_basis"] = candidate["theoretical_basis"] + ["SIG-02"]
 
     # PSY-01 (C-SSRS preparatory behaviour): giving away treasured things, settling affairs, last goodbyes.
     preparatory = [(clause, evidence) for clause, evidence in _affirmative_matches(PREPARATORY, scan)

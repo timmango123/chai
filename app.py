@@ -632,7 +632,11 @@ def api_chat_state():
 # Session keys that belong to one conversation; 「開始新對話」 clears them (the reply style is the student's choice).
 CONVERSATION_KEYS = ("student_context_id", "highest_risk", "safety_pending", "referral_offer_level",
                      "support_offer_state", "case_id", "school_referral_topics", "opening_mood",
-                     "chat_checkin_offered", "school_referral_mentions")
+                     "chat_checkin_offered", "school_referral_mentions", "trusted_nudge_due")
+
+# 2026-11-17 feedback: 「這些心事不用一個人扛…」 appeared under the reply to a greeting. The nudge now waits until the
+# student has sent a message that itself shows distress, and until this many messages into the conversation.
+TRUSTED_NUDGE_MIN_TURNS = 3
 
 # Flow chart 2026-10-31: the opening mood picker sends 「我今天的心情：😢 很難過」. Negative moods take the
 # negative-emotion branch (Satir listening, then the BSRS-5 questions inside the conversation); a mood alone never
@@ -781,6 +785,12 @@ def process_chat_turn(message):
     if mood and "opening_mood" not in session:
         session["opening_mood"] = "negative" if mood.group(1).strip() in NEGATIVE_MOODS else "positive"
     offer_checkin = chat_checkin_offer(context, dialogue_state, level)
+    # A remembered level (or a negative opening mood) is not a reason to nudge under 「哈囉」: the message itself must
+    # show yellow/orange once, and the nudge then waits for the third message so the student is heard first.
+    if RISK_LEVEL_WEIGHTS[own_message_level(triage)] >= RISK_LEVEL_WEIGHTS["yellow"] and not MOOD_MESSAGE.match(message):
+        session["trusted_nudge_due"] = True
+    encourage = (bool(session.get("trusted_nudge_due")) and level in ("yellow", "orange")
+                 and previous_state.get("turn_count", 0) + 1 >= TRUSTED_NUDGE_MIN_TURNS)
     # 性平／霸凌: point to the school counseling office at every risk level. Mild peer trouble waits for a second
     # mention (school_referral.card_topics). Sent with every later message that names the topic (the page shows
     # each topic's card once), so a reply lost to a network error is not the only chance.
@@ -816,7 +826,8 @@ def process_chat_turn(message):
                                      or "gender_equity" in session.get("school_referral_topics", [])),
         "show_support_help": level in ("orange", "red"),
         # Yellow / orange: once, gently suggest a trusted person or the school counseling office (no light shown).
-        "encourage_trusted_people": level in ("yellow", "orange"),
+        # Not before the third message, and only after a message that itself showed distress (see above).
+        "encourage_trusted_people": encourage,
         "notification_connected": False,
         "safety_alert": alert,
         "offer_chat_checkin": offer_checkin,

@@ -42,6 +42,10 @@
         <button type="button" id="studentIdentityBadge" class="student-profile-button" onclick="openOnboardingModal(true)" title="修改暱稱或選填聯絡資料">
           <span id="badgeAlias">先用暱稱聊聊</span> · <span id="badgeEmail">學校／信箱選填</span>
         </button>
+        <!-- 2026-11-17 回饋：語音、主題、風格、安裝等設定收進一個「更多」選單，頁首只留常用入口。 -->
+        <details class="header-more" id="headerMore">
+          <summary title="語音朗讀、聲音、畫面主題、回覆風格、手機安裝">⚙️ 更多</summary>
+          <div class="header-more-panel" id="headerMorePanel">
         <button id="ttsToggleBtn" class="voice-toggle-btn" onclick="toggleAutoSpeech()" title="切換是否自動語音朗讀回覆">🔇 語音朗讀：已關閉</button>
         <button type="button" id="voiceSettingsBtn" class="voice-toggle-btn" aria-haspopup="dialog" aria-controls="voiceDialog" title="選擇朗讀的聲音與速度">🗣️ 聲音</button>
         <label class="theme-picker">
@@ -53,7 +57,7 @@
             <option value="paper">📒 極簡手札</option>
           </select>
         </label>
-        <!-- AI 回覆風格：選擇會記在這台裝置，並隨每則訊息送出；安全優先時伺服器會暫時改用穩定語氣。 -->
+        <!-- AI 回覆風格：選擇會記在這台裝置，並隨每則訊息送出；安全優先時伺服器會暫時改用穩定語氣（畫面不另外提示）。 -->
         <details class="reply-style-menu" id="replyStyleMenu">
           <summary title="選擇 AI 回覆的語氣">🎨 風格：<span id="replyStyleCurrent">溫馨陪伴</span></summary>
           <div class="reply-style-bar" id="replyStyleBar" role="group" aria-labelledby="replyStyleLabel">
@@ -66,6 +70,9 @@
           </div>
         </details>
         <button type="button" id="installButton" class="header-chip" aria-haspopup="dialog" aria-controls="installDialog">📱 手機掃碼安裝</button>
+        <button type="button" id="layoutSwitchButton" class="header-chip" aria-controls="uiVotePanel" hidden>🖼️ 切換版面</button>
+          </div>
+        </details>
       </div>
     </div>
   </nav>
@@ -130,11 +137,6 @@
           <button onclick="stopVoiceRecognition()" style="background: none; border: none; color: #b91c1c; font-size: 0.8rem; cursor: pointer; text-decoration: underline;">取消</button>
         </div>
 
-        <!-- 回覆風格已移到頁首「🎨 風格」選單；安全優先的提示仍顯示在輸入框上方。 -->
-        <div class="reply-style-area reply-style-note-only">
-          <p id="styleSafetyNote" class="style-safety-note" role="status" aria-live="polite" hidden></p>
-        </div>
-
         <!-- 輸入欄位 (含語音輸入麥克風) -->
         <div class="chat-input-bar">
           <!-- 語音輸入按鈕 -->
@@ -190,11 +192,36 @@
           <a href="/resources" target="_blank" rel="noopener" class="choice-chip side-tile-link">🗺️ 看南投資源</a>
         </details>
 
-        <!-- 真人求助 -->
-        <button type="button" id="sidebarHelpButton" class="side-tile side-tile-help" onclick="window.AnlaNextSteps.openHelp()" title="想找輔導老師或真人一起想辦法時按這裡">
-          <span class="side-tile-icon" aria-hidden="true">🙋</span>
-          <span class="side-tile-text"><b>真人求助</b><small>找輔導老師或真人幫忙</small></span>
-        </button>
+        <!-- 真人求助（2026-11-17 回饋）：生命線 LINE 文字協談、真人專線、求救小卡，原本的轉介單保留在最後一項。 -->
+        <details class="panel-card panel-fold side-tile side-tile-help" id="helpFold">
+          <summary title="想找輔導老師或真人一起想辦法時按這裡"><span class="side-tile-icon" aria-hidden="true">🙋</span><span class="side-tile-text"><h3>真人求助</h3><small>找輔導老師或真人幫忙</small></span></summary>
+          <div class="help-options">
+            <a id="lifelineLineLink" class="help-option" href="https://line.me/R/ti/p/%40taiwanlifeline1995" target="_blank" rel="noopener noreferrer"
+               title="國際生命線台灣總會「謝謝你跟我說」文字協談；會另外開啟 LINE">
+              <span aria-hidden="true">💬</span>
+              <span><b>生命線 LINE 文字協談</b><small>用打字的跟真人聊｜LINE ID：@taiwanlifeline1995</small></span>
+            </a>
+            <div class="help-option help-option-phones" role="group" aria-labelledby="helpPhonesLabel">
+              <span aria-hidden="true">📞</span>
+              <span><b id="helpPhonesLabel">真人聯繫專線</b><small>點一下就能撥號，都是真人接聽</small>
+                <span class="help-phone-row">
+                  <a href="tel:1995" class="btn-hotline">1995 生命線</a>
+                  <a href="tel:1925" class="btn-hotline">1925 安心專線</a>
+                  <a href="tel:1980" class="btn-hotline">1980 張老師</a>
+                </span>
+              </span>
+            </div>
+            <button type="button" id="sosCardButton" class="help-option" aria-haspopup="dialog" aria-controls="sosDialog">
+              <span aria-hidden="true">🪪</span>
+              <span><b>生成求救小卡</b><small>說不出口時，拿給信任的人看</small></span>
+            </button>
+            <button type="button" id="sidebarHelpButton" class="help-option" onclick="window.AnlaNextSteps.openHelp()" title="把這次的摘要交給本網站的輔導人員">
+              <span aria-hidden="true">📝</span>
+              <span><b>請輔導老師幫忙</b><small>分享摘要、產生轉介單（由你決定）</small></span>
+            </button>
+          </div>
+          <p class="panel-fine help-fine">LINE 文字協談不是 24 小時，服務時段以生命線公告為準；等不到回覆或有立即危險，請直接打 1995／1925 或 119。</p>
+        </details>
 
         <!-- 在地求助專線（可展開） -->
         <details class="emergency-strip panel-fold side-tile" id="emergencyFold">
@@ -368,7 +395,7 @@
       <a href="/">少年仔、安啦會客室</a>
       <a href="/resources">南投求助資源</a>
     </div>
-    <p>南投縣 2026 年山城數位黑客松暨第四屆麥克松科技競賽 參賽作品 ‧ 團隊名稱：AI 來尬聊</p>
+    <p>團隊名稱：AI 來尬聊</p>
   </footer>
 
   <!-- 身心電力檢核：BSRS-5 六題＋四個結構化問題（static/js/checkin.js）。學生只看到白話說明，不看到燈號與分數。 -->
@@ -431,6 +458,32 @@
     </div>
   </dialog>
 
+  <!-- 求救小卡：只在這台裝置上產生（static/js/sos_card.js），不會傳給任何人；要不要拿給誰看由學生決定。 -->
+  <dialog id="sosDialog" class="install-dialog sos-dialog" aria-labelledby="sosTitle">
+    <div class="install-dialog-body">
+      <div class="install-dialog-head">
+        <h2 id="sosTitle">🪪 求救小卡</h2>
+        <button type="button" id="sosClose" class="install-close" aria-label="關閉求救小卡">×</button>
+      </div>
+      <p class="sos-intro">說不出口的時候，把這張小卡拿給（或傳給）你信任的人看。先選一句最接近的，也可以改成自己的話。</p>
+      <div id="sosPresets" class="sos-presets" role="group" aria-label="選一句最接近的話"></div>
+      <label class="voice-field" for="sosText">卡片上的話（可以修改）
+        <textarea id="sosText" maxlength="80" rows="3"></textarea>
+      </label>
+      <label class="voice-field" for="sosTo">想給誰看（選填）
+        <input id="sosTo" type="text" maxlength="12" placeholder="例如：導師、媽媽、好朋友" autocomplete="off">
+      </label>
+      <canvas id="sosCanvas" class="sos-canvas" width="720" height="900" role="img" aria-label="求救小卡預覽"></canvas>
+      <div class="sos-actions">
+        <button type="button" id="sosDownload" class="btn-primary-action">⬇️ 存成圖片</button>
+        <button type="button" id="sosCopy" class="choice-chip">複製文字</button>
+        <button type="button" id="sosShare" class="choice-chip" hidden>分享給…</button>
+      </div>
+      <p id="sosStatus" class="voice-notice" role="status"></p>
+      <p class="install-privacy">小卡只在你的裝置上產生，沒有傳給任何人，也不會通知學校。有立即危險請直接打 <a href="tel:119">119</a>；想馬上找人談可以打 <a href="tel:1925">1925</a>。</p>
+    </div>
+  </dialog>
+
   <!-- 手機掃碼安裝：QR Code 由伺服器產生（/api/qr.svg），指向手機應開啟的網址。 -->
   <dialog id="installDialog" class="install-dialog" aria-labelledby="installTitle">
     <div class="install-dialog-body">
@@ -472,6 +525,7 @@
   <script src="{{ asset('js/school_referral.js') }}"></script>
   <script src="{{ asset('js/flow.js') }}"></script>
   <script src="{{ asset('js/checkin.js') }}"></script>
+  <script src="{{ asset('js/sos_card.js') }}"></script>
   <script src="{{ asset('js/pwa.js') }}"></script>
 </body>
 </html>

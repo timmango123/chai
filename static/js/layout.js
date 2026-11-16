@@ -146,7 +146,7 @@
     drawer.addEventListener("click", function (event) {
       if (event.target.closest("[data-close]")) closeDrawer();
       // 從抽屜開啟對話框或執行動作後，順手把抽屜關掉，避免蓋住對話框。
-      else if (event.target.closest("button[onclick], button[data-open-checkin], #hideButton, #jokeButton, #breathButton")) {
+      else if (event.target.closest("button[onclick], button[data-open-checkin], #hideButton, #jokeButton, #breathButton, #sosCardButton, #layoutSwitchButton")) {
         window.setTimeout(closeDrawer, 0);
       }
     });
@@ -172,10 +172,10 @@
       else if (tab === "check") { closeDrawer(); var open = document.querySelector(".sidebar-panel [data-open-checkin], [data-open-checkin]"); open && open.click(); }
       else if (tab === "relax") openDrawer("#relaxFold");
       else if (tab === "help") {
-        // 「求助」先看到「真人求助」，緊急電話展開在它正下方（原本直接捲到電話，真人求助被捲到畫面外）。
+        // 「求助」先看到展開的「真人求助」（LINE、專線、求救小卡、轉介單），緊急電話展開在它正下方。
         var fold = document.getElementById("emergencyFold");
         if (fold) fold.open = true;
-        openDrawer("#sidebarHelpButton");
+        openDrawer("#helpFold");
       }
       else openDrawer();
     });
@@ -186,6 +186,9 @@
   function arrange(layout) {
     restoreAll();
     closeDrawer();
+    // 頁首的「更多」選單：搬進抽屜時固定展開（抽屜本身就是「更多」），留在頁首時預設收起。
+    var more = document.getElementById("headerMore");
+    if (more) more.open = Boolean(drawerBody && DRAWER_LAYOUTS[layout]);
     if (!drawerBody || !DRAWER_LAYOUTS[layout]) return;
     var keepInHeader = { headerReferralButton: true, headerSchoolReferralButton: true };
     var section = function (title) {
@@ -216,19 +219,7 @@
       drawerBody.appendChild(section("個人與設定"));
       park(meta, drawerBody);
     }
-    // 手機上投票鈕不浮在畫面上（會蓋住內容或分頁列），改從「更多」進入。
-    if (voteToggle) {
-      var voteEntry = document.createElement("button");
-      voteEntry.type = "button";
-      voteEntry.className = "layout-drawer-vote";
-      voteEntry.textContent = voteToggle.textContent;
-      voteEntry.addEventListener("click", function () {
-        closeDrawer();
-        if (votePanel && votePanel.hidden) voteToggle.click();
-      });
-      temps.push(voteEntry);
-      drawerBody.appendChild(voteEntry);
-    }
+    // 版面投票／切換版面的入口在「更多」選單裡（#layoutSwitchButton），跟著上面的設定一起搬進抽屜。
   }
 
   function setLayout(layout, remember) {
@@ -347,7 +338,6 @@
       if (event.target.closest("[data-vote-close]")) {
         votePanel.hidden = true;
         voteToggle.setAttribute("aria-expanded", "false");
-        voteToggle.focus();
       } else if (preview) {
         setLayout(preview.getAttribute("data-preview"));
         // 手機上面板會蓋住整個畫面：按「試用」後先收起來，才看得到正在試的版面。
@@ -360,7 +350,14 @@
       }
       else if (cast && voteEnabled) vote(cast.getAttribute("data-vote"));
     });
-    document.body.appendChild(voteToggle);
+    // 2026-11-17 回饋：左下角不再有浮動按鈕；入口改放在頁首「更多」選單裡。
+    // voteToggle 只保留開關狀態，不放進頁面。
+    var entry = document.getElementById("layoutSwitchButton");
+    if (entry) {
+      entry.textContent = voteToggle.textContent;
+      entry.hidden = false;
+      entry.addEventListener("click", function () { voteToggle.click(); });
+    }
     document.body.appendChild(votePanel);
     if (!voteEnabled) voteState = { counts: {}, total: 0, mine: null, loaded: true, error: "" };
     renderVotePanel();

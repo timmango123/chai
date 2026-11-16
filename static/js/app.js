@@ -13,7 +13,6 @@ let studentOnboarded = false;
 // ==================== AI 回覆風格（記在這台裝置，隨每則訊息送出） ====================
 const REPLY_STYLES = ["warm", "lively", "humor", "rational", "listen_only"];
 const REPLY_STYLE_KEY = "anla_reply_style";
-const SAFETY_STYLE_NOTE = "🛟 目前先以安全為優先，暫時用穩定的語氣陪你。你選的風格會先幫你保留著。";
 let replyStyleChosen = false;
 let currentReplyStyle = (() => {
   try {
@@ -45,20 +44,10 @@ function setReplyStyle(style, remember = true) {
   renderReplyStyle();
 }
 
+// 安全優先時伺服器會暫時改用穩定語氣；輸入框上方不再另外顯示提示列（2026-11-17 回饋），只在風格選單內標示。
 function applySafetyStyleOverride(overridden) {
   const bar = document.getElementById("replyStyleBar");
-  const note = document.getElementById("styleSafetyNote");
-  if (bar) {
-    bar.classList.toggle("is-overridden", overridden);
-    bar.querySelectorAll(".style-capsule").forEach(button => {
-      if (overridden) button.setAttribute("aria-describedby", "styleSafetyNote");
-      else button.removeAttribute("aria-describedby");
-    });
-  }
-  if (note) {
-    note.textContent = overridden ? SAFETY_STYLE_NOTE : "";
-    note.hidden = !overridden;
-  }
+  if (bar) bar.classList.toggle("is-overridden", overridden);
 }
 
 function applyReplyStyleResponse(data) {
@@ -77,10 +66,26 @@ document.addEventListener("DOMContentLoaded", () => {
       if (menu) menu.open = false;
     });
   });
-  // 點選單外面就收起風格選單
+  // 點選單外面就收起風格選單與「更多」選單（「更多」被搬進抽屜時固定展開，不收）
   document.addEventListener("click", event => {
     const menu = document.getElementById("replyStyleMenu");
     if (menu && menu.open && !menu.contains(event.target)) menu.open = false;
+    const more = document.getElementById("headerMore");
+    if (more && more.open && !more.contains(event.target) && !more.closest(".layout-drawer")) more.open = false;
+  });
+  document.addEventListener("keydown", event => {
+    const more = document.getElementById("headerMore");
+    if (event.key === "Escape" && more && more.open && !more.closest(".layout-drawer")) {
+      more.open = false;
+      more.querySelector("summary")?.focus();
+    }
+  });
+  // 從「更多」開啟對話框（聲音、手機安裝、切換版面）後把選單收起來，不蓋住對話框。
+  document.getElementById("headerMorePanel")?.addEventListener("click", event => {
+    const more = document.getElementById("headerMore");
+    if (event.target.closest("#voiceSettingsBtn, #installButton, #layoutSwitchButton") && more && !more.closest(".layout-drawer")) {
+      more.open = false;
+    }
   });
 });
 
