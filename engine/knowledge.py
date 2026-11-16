@@ -346,6 +346,12 @@ def drop_unverified_citations(reply, selected):
     return re.sub(r"[ \t]{2,}", " ", cleaned).strip()
 
 
+def display_name(publisher):
+    """The publisher as shown beside a link. Some cards record the ministry with its agency as
+    「衛生福利部（資料來源：國民健康署）」, which read as a typo after the 「資料來源：」 label on the page."""
+    return re.sub(r"\s*[（(]\s*資料來源[:：]\s*([^（()）]+?)\s*[）)]", r"\1", publisher).strip()
+
+
 def public_sources(reply, selected, limit=2):
     """The pages the reply actually drew on, for the links under it: each source whose organisation the reply
     names, best match to the reply first, labelled with the page's own title. A link labelled with the card's title
@@ -358,7 +364,7 @@ def public_sources(reply, selected, limit=2):
             if not _mentions(reply, publisher):
                 continue
             overlap = len(words & set(_grams(source.get("supports", "") + source.get("name", ""))))
-            found.append((overlap, {"title": source.get("name") or card["title"], "publisher": publisher,
+            found.append((overlap, {"title": source.get("name") or card["title"], "publisher": display_name(publisher),
                                     "url": source["url"], "card": card["title"]}))
     found.sort(key=lambda pair: -pair[0])
     shown, seen = [], set()

@@ -145,6 +145,28 @@ class ShortSourceNameTests(RouteBase):
         self.assertEqual([s["url"] for s in shown], ["https://www.ntnu.edu.tw/a"])
 
 
+class SourceLabelTests(RouteBase):
+    """The link under a reply already starts with 「資料來源：」; the publisher must not repeat it."""
+
+    def test_the_nested_label_is_folded_into_the_agency_name(self):
+        from engine import knowledge
+        card = {"id": "sleep", "title": "睡眠", "sources": [
+            {"publisher": "衛生福利部（資料來源：國民健康署）", "name": "好眠秘笈", "url": "https://www.hpa.gov.tw/e"}]}
+        shown = knowledge.public_sources("睡前一小時先放下手機（資料來源：國民健康署）。", [card])
+        self.assertEqual([s["publisher"] for s in shown], ["衛生福利部國民健康署"])
+
+    def test_other_publisher_names_are_shown_as_written(self):
+        from engine import knowledge
+        for name in ("NHS (UK)", "國立臺灣師範大學學生事務處學生輔導中心", "衛生福利部 心快活心理健康學習平台"):
+            self.assertEqual(knowledge.display_name(name), name)
+
+    def test_no_real_card_shows_the_label_twice(self):
+        from engine import knowledge
+        for card in knowledge.cards():
+            for publisher in knowledge.publishers(card):
+                self.assertNotIn("資料來源", knowledge.display_name(publisher), publisher)
+
+
 from unittest.mock import patch  # noqa: E402
 
 from engine.dialogue_ai import UNAVAILABLE_LABEL  # noqa: E402
