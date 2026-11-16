@@ -345,3 +345,12 @@ html[data-layout="app"] .layout-tabbar button span { font-size: .8rem; }
   background: var(--t-warn-bg, #fff7ed); border: 1px solid var(--t-warn-border, #fdba74); color: var(--t-warn-text, #9a3412); }
 .onboarding-error[hidden] { display: none; }
 .resume-notice .choice-chip { margin-top: .4rem; font-size: .85rem; padding: .4rem .8rem; }
+
+/* 平板寬度（651–900px）：投票鈕原本浮在左下角會蓋住麥克風鈕，比照手機改放頁面最下方／「更多」抽屜；
+   建議話題列換行，不出現橫向捲軸。 */
+@media (min-width: 651px) and (max-width: 900px) {
+  .ui-vote-toggle, html[data-layout="app"] .ui-vote-toggle { position: static; display: block; margin: 1rem auto; box-shadow: none; }
+  html:not([data-layout="classic"]) .ui-vote-toggle { display: none; }
+  .layout-drawer-vote { display: block; }
+  html[data-layout="classic"] .quick-tags, html[data-layout="rail"] .quick-tags { flex-wrap: wrap; overflow-x: visible; }
+}
