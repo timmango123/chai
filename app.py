@@ -856,6 +856,13 @@ def assessment_feedback(triage, level):
         "red": "謝謝你告訴我。你現在的安全最重要：如果有立即危險，請馬上撥 119；想找人談可以打 1925，二十四小時都有人接。",
     }
     text = lines[level]
+    total = bsrs.get("total_score")
+    if level == "yellow" and total is not None and total <= 5 and not (bsrs.get("suicide_score") or 0):
+        # The review level can be yellow because of what was said earlier while the answers themselves are light
+        # (BSRS-5 0–5). Do not tell a student who answered 「完全沒有」 almost everywhere that they look unwell
+        # (2026-11-16 simulation); the level staff see is unchanged, only the wording.
+        text = ("謝謝你花時間回答完。從這次的回答看，困擾還算輕；如果前面聊到的事還卡在心上，"
+                "想找輔導老師或信任的大人說說也可以，我也可以幫你寫一張字條。")
     if (bsrs.get("suicide_score") or 0) >= 1 and level != "red":
         text += "你在最後一題說有出現這樣的想法，想直接問你：你現在安全嗎？想說的話可以在對話框跟我說；需要時也可以直接打 1925。"
     return {"text": text, "ask_safety": (bsrs.get("suicide_score") or 0) >= 1}
@@ -1345,6 +1352,8 @@ def api_get_resources():
 
 
 DRAFT_EXTRA = r"睡不好|睡不著|失眠|壓力|心情不好|焦慮|人際|被排擠|被笑|霸凌|課業"
+FAMILY_SPOKEN = r"我[弟妹哥姊姐媽爸]|阿公|阿嬤|阿媽|爺爺|奶奶|外公|外婆"
+FAMILY_TOPIC = r"爸媽|爸爸|媽媽|家人|家裡|哥哥|姊姊|姐姐|弟弟|妹妹"
 
 
 def draft_topics(context):
@@ -1356,6 +1365,10 @@ def draft_topics(context):
         for match in re.finditer(TOPIC_PATTERN + "|" + DRAFT_EXTRA, text):
             if match.group(0) not in found:
                 found.append(match.group(0))
+    # 「我弟」「我媽」 are not topic words, so a quarrel about a brother and a game became a note about 「遊戲」
+    # (2026-11-16 simulation). Name the family first when the student talked about them.
+    if any(re.search(FAMILY_SPOKEN, text) for text in texts) and not any(re.fullmatch(FAMILY_TOPIC, f) for f in found):
+        found.insert(0, "家人")
     return "、".join(found[:3])
 
 

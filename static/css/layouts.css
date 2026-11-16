@@ -354,3 +354,9 @@ html[data-layout="app"] .layout-tabbar button span { font-size: .8rem; }
   .layout-drawer-vote { display: block; }
   html[data-layout="classic"] .quick-tags, html[data-layout="rail"] .quick-tags { flex-wrap: wrap; overflow-x: visible; }
 }
+
+/* 桌機：投票面板的頂端不超過頁首（原本在 768 高的螢幕會蓋住站名與圖示）。 */
+@media (min-width: 901px) {
+  .ui-vote-panel { max-height: calc(100dvh - var(--chat-top, 130px) - 4.75rem); }
+  html[data-layout="app"] .ui-vote-panel { max-height: calc(100dvh - var(--chat-top, 64px) - 68px - 4.5rem); }
+}

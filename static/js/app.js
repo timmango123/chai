@@ -313,6 +313,7 @@ async function startNewConversation() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || "暫時無法開始新對話，請稍後再試。");
+    try { sessionStorage.removeItem("anla_trusted_nudged"); } catch (e) { /* 不記憶也能用 */ }
     location.reload();
   } catch (error) {
     alert(error.message || "暫時無法開始新對話，請稍後再試。");

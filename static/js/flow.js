@@ -573,10 +573,14 @@ window.AnlaFlow = (() => {
   }
 
   // ---------- 黃燈／橙燈：鼓勵找身邊信任的人或輔導室聊聊（學生頁仍不顯示燈號） ----------
+  // 一段對話只提醒一次：重新整理後不再重複出現（記在這個分頁；「開始新對話」會清掉）。
+  const NUDGE_KEY = "anla_trusted_nudged";
   let nudged = false;
+  try { nudged = sessionStorage.getItem(NUDGE_KEY) === "1"; } catch (e) { /* 不記憶也能用 */ }
   function encourageTrustedPeople(bubble, wanted) {
     if (nudged || !bubble || !wanted) return;
     nudged = true;
+    try { sessionStorage.setItem(NUDGE_KEY, "1"); } catch (e) { /* 不記憶也能用 */ }
     const box = el("div", "", "trusted-nudge");
     box.appendChild(el("p", "💛 這些心事不用一個人扛。如果願意，也可以找身邊信任的人（家人、朋友、導師）聊聊，或在下課時間去學校輔導室坐坐，輔導老師很願意聽你說。", ""));
     const row = el("div", "", "choice-chips");
