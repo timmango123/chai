@@ -253,8 +253,56 @@ def _aliases(publisher):
     return {n for n in names if n and len(n) >= 2}
 
 
+def _plain(name):
+    """An organisation name reduced for comparison: no spaces, punctuation or 「國立／財團法人」, 臺 = 台."""
+    return re.sub(r"[\s　·‧・,，、()（）〈〉《》「」\-–—]|國立|財團法人", "", name).replace("臺", "台").lower()
+
+
+def _short_for(named, publisher):
+    """True when `named` is a shortened form of `publisher`: 「臺師大學輔中心」 for 「國立臺灣師範大學學生事務處學生
+    輔導中心」, 「心快活」 for 「衛生福利部 心快活心理健康學習平台」. The prompt asks the model to cite a short name, so
+    the check must accept one (2026-11-16 live simulation: three of four replies to 「拍照怎麼才不會緊張」 were
+    dropped as invented sources). A short name has at least three characters, keeps the publisher's characters in
+    order, and either starts where the publisher's name starts or keeps four of them together: 「國健署」 is not a
+    short form of 「英國國民保健署」 just because its three characters appear there in order."""
+    short, full = _plain(named), _plain(publisher)
+    if len(short) < 3 or len(short) > len(full):
+        return False
+    if short in full:
+        return True
+    # Abbreviating by dropping characters is a Chinese-name habit; letters would make 「APA」 a short form of
+    # 「American Academy of Pediatrics」.
+    if not re.fullmatch(r"[一-鿿]+", short):
+        return False
+    rest = iter(full)
+    if not all(ch in rest for ch in short):
+        return False
+    return short[0] == full[0] or any(short[i:i + 4] in full for i in range(len(short) - 3))
+
+
+CITATION = r"資料來源[:：]\s*([^）)\n。]+)"
+
+
+def _citation_parts(named):
+    """The organisations in one 「資料來源：…」: split on 、與和及, without a quoted page title."""
+    named = re.sub(r"[〈《「][^〉》」]*[〉》」]", "", named)
+    return [part.strip() for part in re.split(r"[、；;／/]|(?<=[^\s])\s*(?:與|和|及)\s*", named) if part.strip()]
+
+
 def _mentions(text, publisher):
-    return any(name.lower() in text.lower() for name in _aliases(publisher))
+    if any(name.lower() in text.lower() for name in _aliases(publisher)):
+        return True
+    # A short name counts only inside a citation: loose matching on the whole reply would see names everywhere.
+    return any(_short_for(part, publisher) for named in re.findall(CITATION, text) for part in _citation_parts(named))
+
+
+def _names(part, publisher):
+    """One cited organisation names this publisher: by an alias, or as a short form of it."""
+    return any(name.lower() in part.lower() for name in _aliases(publisher)) or _short_for(part, publisher)
+
+
+def _in_group(publisher, group):
+    return any(alias.lower() in publisher.lower() or _short_for(alias, publisher) for alias in group)
 
 
 def cited(reply, selected):
@@ -262,20 +310,40 @@ def cited(reply, selected):
     return [card for card in selected if any(name and _mentions(reply, name) for name in publishers(card))]
 
 
+def _other_known_org(text, given):
+    """A known organisation (ORG_GROUPS) named in the text that is not behind any of this turn's cards."""
+    return any(any(alias.lower() in text.lower() for alias in group) and not any(_in_group(p, group) for p in given)
+               for group in ORG_GROUPS)
+
+
 def invented_source(reply, selected):
-    """True when the reply cites a source that was not given: a 「資料來源：X」 naming none of this turn's cards, or
-    a known organisation that is not among this turn's card publishers."""
+    """True when the reply cites a source that was not given: a 「資料來源：X」 naming an organisation that is on
+    none of this turn's cards, or a known organisation that is not among this turn's card publishers."""
     given = [p for card in selected for p in publishers(card)]
     # Pointing to 1925 (衛福部安心專線) is a hotline, not a cited source.
     reply = re.sub(r"(?:衛福部|衛生福利部)\s*的?\s*(?:1925|安心專線)", "", reply)
-    for named in re.findall(r"資料來源[:：]\s*([^）)\n。]+)", reply):
-        if not any(_mentions(named, p) for p in given):
+    for named in re.findall(CITATION, reply):
+        parts = _citation_parts(named) or [named]
+        if not all(any(_names(part, p) for p in given) for part in parts):
             return True
-    for group in ORG_GROUPS:
-        if any(alias.lower() in reply.lower() for alias in group) and not any(
-                alias.lower() in p.lower() for p in given for alias in group):
-            return True
-    return False
+    return _other_known_org(reply, given)
+
+
+def drop_unverified_citations(reply, selected):
+    """The reply without the 「（資料來源：X）」 labels that match none of this turn's cards, when X is not a known
+    other organisation: a garbled short name loses its label instead of costing the student the whole reply.
+    A label naming a known organisation that was not given (哈佛、WHO…) is left in place, so invented_source
+    still reports it and the reply is not sent."""
+    given = [p for card in selected for p in publishers(card)]
+
+    def keep_or_drop(match):
+        named = match.group("named")
+        parts = _citation_parts(named) or [named]
+        if all(any(_names(part, p) for p in given) for part in parts) or _other_known_org(named, given):
+            return match.group(0)
+        return ""
+    cleaned = re.sub(r"\s*[（(]\s*資料來源[:：]\s*(?P<named>[^）)\n。]+)[）)]", keep_or_drop, reply)
+    return re.sub(r"[ \t]{2,}", " ", cleaned).strip()
 
 
 def public_sources(reply, selected, limit=2):

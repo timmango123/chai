@@ -870,7 +870,14 @@ def generate_youth_response(message, triage_result, conversation_history=None, s
                 issues = response_violations(better, state, message, offer) + output_issues(better, SYSTEM_PROMPT)
         # Harness: a reply that names a source it was not given is not sent (docs/HARNESS_PLAN.md).
         if cards and knowledge.invented_source(model["reply"], cards):
-            issues.append("invented_source")
+            # A source label that matches no card is removed when that alone fixes it (a garbled short name);
+            # naming a known organisation that was not given still stops the reply.
+            unlabelled = knowledge.drop_unverified_citations(model["reply"], cards)
+            if unlabelled and unlabelled != model["reply"] and not knowledge.invented_source(unlabelled, cards):
+                model["reply"] = unlabelled
+                issues.append("citation_dropped")
+            else:
+                issues.append("invented_source")
         hard = [i for i in issues if i in HARD_ISSUES]
         if not hard:
             if issues:
