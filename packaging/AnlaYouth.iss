@@ -38,9 +38,10 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 UninstallDisplayName={#MyAppName}
 
 [Languages]
-; 只使用 Inno Setup 內建且保證存在的英文訊息檔；繁中訊息檔（ChineseTraditional.isl）為非官方翻譯，
-; 若已自行放入 Inno Setup 的 Languages 資料夾，可再加一行。
-Name: "english"; MessagesFile: "compiler:Default.isl"
+; 安裝畫面用繁體中文。Inno Setup 沒有內建繁中，訊息檔放在本資料夾（packaging\ChineseTraditional.isl，
+; 取自 jrsoftware/issrc is-6_7_3 的 Files/Languages/Unofficial，社群翻譯）。先載入內建英文再用繁中覆蓋：
+; 新版 Inno Setup 多出來、翻譯檔還沒有的訊息會顯示英文，不會編譯失敗。
+Name: "chinesetraditional"; MessagesFile: "compiler:Default.isl,ChineseTraditional.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
