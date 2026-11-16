@@ -1033,3 +1033,10 @@ body.has-urgent-help { padding-top: var(--urgent-help-height, 125px); }
 .panel-fold[open] > summary::after { transform: rotate(90deg); }
 .panel-fold > summary h3, .panel-fold > summary h4 { margin: 0; }
 .panel-fold[open] > summary { margin-bottom: .6rem; }
+
+/* 資源頁頁首：副標題只在「‧」處換行，不把「身心科」拆開；平板寬度時導覽連結換到下一行。 */
+.resources-page .brand-tag > span { white-space: nowrap; }
+@media (max-width: 900px) {
+  .resources-page .navbar { flex-wrap: wrap; gap: .5rem 1rem; }
+  .resources-page .navbar .nav-links { flex-wrap: wrap; gap: .35rem; }
+}

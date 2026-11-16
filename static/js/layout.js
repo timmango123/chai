@@ -171,7 +171,12 @@
       if (tab === "chat") { closeDrawer(); var input = document.getElementById("userInput"); input && input.focus(); }
       else if (tab === "check") { closeDrawer(); var open = document.querySelector(".sidebar-panel [data-open-checkin], [data-open-checkin]"); open && open.click(); }
       else if (tab === "relax") openDrawer("#relaxFold");
-      else if (tab === "help") openDrawer("#emergencyFold");
+      else if (tab === "help") {
+        // 「求助」先看到「真人求助」，緊急電話展開在它正下方（原本直接捲到電話，真人求助被捲到畫面外）。
+        var fold = document.getElementById("emergencyFold");
+        if (fold) fold.open = true;
+        openDrawer("#sidebarHelpButton");
+      }
       else openDrawer();
     });
     document.body.appendChild(tabbar);
