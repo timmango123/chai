@@ -141,8 +141,28 @@ document.addEventListener("DOMContentLoaded", () => {
     applyReplyStyleResponse(data);
     window.AnlaNextSteps.update(data);
     window.AnlaSchoolReferral.setAvailable(data.school_referral_available);
+    if (data.has_conversation) showResumeNotice();
   }).catch(() => {}).finally(checkOnboardingStatus);
 });
+
+// 重新整理後畫面不重播先前的對話（避免共用電腦上被下一個人看到），但要說清楚對話沒有不見。
+function showResumeNotice() {
+  const chat = document.getElementById("chatMessages");
+  if (!chat || document.getElementById("resumeNotice")) return;
+  const note = document.createElement("div");
+  note.id = "resumeNotice";
+  note.className = "system-notice resume-notice";
+  note.setAttribute("role", "status");
+  const text = document.createElement("p");
+  text.textContent = "🔒 為了隱私，重新整理後畫面不會重播先前的對話。安啦還記得你們剛才聊的內容（24 小時內），可以直接接著說。";
+  const fresh = document.createElement("button");
+  fresh.type = "button";
+  fresh.className = "choice-chip";
+  fresh.textContent = "不想接著聊，開始新對話";
+  fresh.addEventListener("click", startNewConversation);
+  note.append(text, fresh);
+  chat.prepend(note);
+}
 
 // ==================== 資料使用說明與選填聯絡資料 ====================
 
@@ -172,7 +192,10 @@ function openOnboardingModal(allowClose) {
   const schoolInput = document.getElementById("onboardingSchool");
 
   if (emailInput) emailInput.value = studentEmail || sessionStorage.getItem("anla_student_email") || "";
-  if (aliasInput && studentAlias) aliasInput.value = studentAlias;
+  // 還沒取暱稱時讓欄位留白（提示文字寫「留白也可以」），不預填「匿名同學」。
+  if (aliasInput) aliasInput.value = studentOnboarded && studentAlias !== "匿名同學" ? studentAlias : "";
+  const consentError = document.getElementById("onboardingConsentError");
+  if (consentError) consentError.hidden = true;
   if (townshipSelect && studentTownship) townshipSelect.value = studentTownship;
   if (schoolInput) schoolInput.value = studentSchool;
   const editing = Boolean(allowClose && studentOnboarded);
@@ -193,8 +216,15 @@ async function submitOnboarding(event) {
 
   const email = emailInput.value.trim();
   const acknowledged = document.getElementById("onboardingConsent").checked;
-  if ((email && !emailInput.checkValidity()) || !acknowledged) {
-    alert("請先閱讀資料使用說明。信箱可以留白；如果填寫，請確認格式正確。");
+  const consentError = document.getElementById("onboardingConsentError");
+  if (consentError) consentError.hidden = acknowledged;
+  if (!acknowledged) {
+    document.getElementById("onboardingConsent").focus();
+    return;
+  }
+  if (email && !emailInput.checkValidity()) {
+    document.getElementById("onboardingContactFields").open = true;
+    emailInput.reportValidity();
     return;
   }
   try {
@@ -272,7 +302,7 @@ async function startNewConversation() {
     openOnboardingModal(false);
     return;
   }
-  const ok = confirm("要開始新對話嗎？\n\n剛才的對話會從這個網站的暫存刪除，安啦也不會再記得。已經送到真人工作臺的資料不會被刪除。\n\n如果現在有立即危險，請先撥 119，或打 1925 安心專線。");
+  const ok = confirm("要開始新對話嗎？\n\n剛才的對話會從這個網站的暫存刪除，安啦也不會再記得。已經同意分享給輔導人員的資料不會被刪除。\n\n如果現在有立即危險，請先撥 119，或打 1925 安心專線。");
   if (!ok) return;
   if (typeof stopSpeech === "function") stopSpeech();
   try {
@@ -535,7 +565,7 @@ function initVoiceRecognition() {
 function toggleVoiceRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    alert("您的瀏覽器暫不支援麥克風語音輸入（建議使用 Chrome, Edge 或 Safari 瀏覽器）。您也可以直接以打字方式跟安啦聊聊喔！");
+    alert("這個瀏覽器暫時不支援麥克風語音輸入（建議使用 Chrome、Edge 或 Safari）。你也可以直接打字跟安啦聊聊喔！");
     return;
   }
 

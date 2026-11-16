@@ -53,7 +53,10 @@
     });
     const more = byId("checkinQuestions");
     QUESTIONS.forEach(([key, label, options]) => more.appendChild(radioGroup(key, label, options)));
-    form.addEventListener("change", progress);
+    form.addEventListener("change", event => {
+      event.target.closest?.(".checkin-missing")?.classList.remove("checkin-missing");
+      progress();
+    });
     form.addEventListener("submit", submit);
   }
 
@@ -66,7 +69,9 @@
     const total = ITEMS.length + QUESTIONS.length;
     const done = answered();
     byId("checkinProgress").textContent = `已回答 ${done} / ${total} 題`;
-    byId("checkinSubmit").disabled = done < total || busy;
+    // 沒答完也可以按：submit() 會指出還沒選的題目，不讓按鈕看起來能按卻沒反應。
+    byId("checkinSubmit").disabled = busy;
+    if (done === total) byId("checkinError").textContent = "";
   }
 
   function open() {
@@ -77,6 +82,7 @@
     build();
     const form = byId("checkinForm");
     form.reset();
+    form.querySelectorAll(".checkin-missing").forEach(set => set.classList.remove("checkin-missing"));
     form.hidden = false;
     byId("checkinResult").hidden = true;
     byId("checkinError").textContent = "";
@@ -99,6 +105,15 @@
     if (busy) return;
     const form = byId("checkinForm");
     const value = name => form.querySelector(`input[name="${name}"]:checked`)?.value;
+    const missing = [...form.querySelectorAll("fieldset.checkin-item")].filter(set => !set.querySelector("input:checked"));
+    form.querySelectorAll(".checkin-missing").forEach(set => set.classList.remove("checkin-missing"));
+    if (missing.length) {
+      missing.forEach(set => set.classList.add("checkin-missing"));
+      byId("checkinError").textContent = `還有 ${missing.length} 題沒選（已用虛線框標出），每題點一個最接近的就好。`;
+      missing[0].scrollIntoView({block: "center"});
+      missing[0].querySelector("input")?.focus({preventScroll: true});
+      return;
+    }
     const bsrs5 = Object.fromEntries(ITEMS.map(([key]) => [key, Number(value(key))]));
     busy = true;
     progress();

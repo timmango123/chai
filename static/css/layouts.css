@@ -272,3 +272,76 @@ html[data-theme] .sidebar-panel #emergencyFold { color: var(--t-danger-text, #99
 @media (max-width: 650px) {
   .reply-style-menu .reply-style-bar { right: auto; left: 0; }
 }
+
+/* =====================================================================
+   2026-11-16 模擬使用後的修正
+   ===================================================================== */
+/* 對話框高度依頁首實際高度（layout.js 的 fitChat 寫入 --chat-top），輸入框固定落在第一屏內。 */
+@media (min-width: 901px) {
+  html[data-layout="classic"] .student-page .chat-card,
+  html[data-layout="rail"] .student-page .chat-card { height: calc(100dvh - var(--chat-top, 130px) - 16px); min-height: 420px; }
+  html[data-layout="classic"] .student-page .sidebar-panel,
+  html[data-layout="rail"] .student-page .sidebar-panel { top: var(--chat-top, 84px); max-height: calc(100dvh - var(--chat-top, 104px) - 16px - 3.75rem); /* 底部留給「版面投票」浮動鈕，不蓋住最後一張卡 */ }
+  html[data-layout="classic"] .quick-tags, html[data-layout="rail"] .quick-tags { flex-wrap: wrap; overflow-x: visible; }
+}
+html[data-layout="focus"] .student-page .chat-card { height: calc(100dvh - var(--chat-top, 134px) - 16px); min-height: 420px; }
+html[data-layout="app"] .student-page .chat-card { height: calc(100dvh - var(--chat-top, 64px) - 68px); min-height: 360px; }
+@media (max-width: 650px) {
+  html[data-layout="focus"] .student-page .chat-card,
+  html[data-layout="rail"] .student-page .chat-card { height: calc(100dvh - var(--chat-top, 104px) - 16px); }
+}
+@media (max-width: 900px) {
+  /* 原版在窄螢幕：對話框至少留出輸入框，不再固定 660px 把輸入框推到第二屏。 */
+  html[data-layout="classic"] .student-page .chat-card { height: max(420px, calc(100dvh - var(--chat-top, 300px) - 16px)); }
+}
+
+/* 一鍵隱藏與求助電話：任何版型的頁首都看得到（原版在寬螢幕側欄第一格已有，就不重複）。 */
+.layout-quick-hide { min-height: 36px; padding: .25rem .7rem; border-radius: 999px; border: 1px solid var(--t-border-strong, #cbd5e1);
+  background: var(--t-surface, #fff); color: var(--t-accent-ink, #3730a3); font: inherit; font-size: .85rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap; }
+.layout-quick-hide:focus-visible { outline: 2px solid var(--t-focus, #4f46e5); outline-offset: 2px; }
+@media (max-width: 900px) {
+  html[data-layout="classic"] .layout-header-bar { display: flex; flex-wrap: wrap; order: -1; }
+  html[data-layout="classic"] .layout-menu-button { display: none; }
+}
+@media (max-width: 650px) {
+  .layout-quick-hide { padding: .2rem .5rem; font-size: .78rem; }
+  html:not([data-layout="classic"]) #headerReferralButton { display: none; } /* 底部分頁／更多裡已有「真人求助」，頁首留給隱藏與電話 */
+  html:not([data-layout="classic"]) .student-navbar .nav-logo { display: none; }
+}
+
+/* 底部分頁：「求助」不再固定紅字（看起來像目前所在分頁）；字放大到好讀。 */
+html[data-layout="app"] .layout-tabbar .layout-tab-help { color: var(--t-muted, #475569); }
+html[data-layout="app"] .layout-tabbar button span { font-size: .8rem; }
+/* 抽屜裡側欄已有「身心檢核」，常用區不再重複。 */
+.layout-drawer .layout-drawer-links .header-dup-of-side { display: none; }
+
+/* 手機：投票鈕不再浮在內容上，改放在頁面最下方。 */
+@media (max-width: 650px) {
+  .ui-vote-toggle, html[data-layout="app"] .ui-vote-toggle { position: static; display: block; width: auto; height: auto; min-height: 44px;
+    margin: 1rem auto; padding: .5rem 1rem; font-size: .9rem; overflow: visible; box-shadow: none; top: auto; right: auto; }
+  .ui-vote-toggle::before { content: none; }
+  html:not([data-layout="classic"]) .ui-vote-toggle { display: none; } /* 改從「更多」抽屜進入 */
+}
+.layout-drawer-vote { display: none; min-height: 44px; padding: .5rem 1rem; border-radius: 12px; border: 1px solid var(--t-border-strong, #cbd5e1);
+  background: var(--t-surface, #fff); color: var(--t-text, #1e293b); font: inherit; font-size: .9rem; font-weight: 700; cursor: pointer; }
+@media (max-width: 650px) { .layout-drawer-vote { display: block; } }
+
+/* 檢核：沒答的題目用底色標出；五個程度在手機排成一列，不再掉一個到下一行。 */
+.checkin-item.checkin-missing { outline: 2px dashed var(--t-danger-text, #b45309); outline-offset: 4px; border-radius: 8px; }
+.btn-primary-action:disabled { opacity: .55; cursor: not-allowed; transform: none; box-shadow: none; }
+@media (max-width: 520px) {
+  #checkinItems .checkin-options { flex-wrap: nowrap; gap: .25rem; }
+  #checkinItems .checkin-options label { flex: 1 1 0; min-width: 0; justify-content: center; padding: .35rem .15rem; font-size: .78rem;
+    white-space: nowrap; min-height: 40px; }
+}
+
+/* 好讀與好按：小字放大、按鈕加高。 */
+.btn-play-voice { min-height: 32px; font-size: .8rem !important; }
+.student-header-tools .nav-item, .student-header-meta .voice-toggle-btn, .student-header-meta .header-chip,
+.student-profile-button, .reply-style-menu > summary, .theme-picker select { min-height: 36px; }
+.ai-status { min-height: 32px; }
+.onboarding-error { margin: -.4rem 0 .8rem; padding: .45rem .7rem; border-radius: 8px; font-size: .85rem;
+  background: var(--t-warn-bg, #fff7ed); border: 1px solid var(--t-warn-border, #fdba74); color: var(--t-warn-text, #9a3412); }
+.onboarding-error[hidden] { display: none; }
+.resume-notice .choice-chip { margin-top: .4rem; font-size: .85rem; padding: .4rem .8rem; }

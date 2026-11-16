@@ -9,7 +9,7 @@
 <body style="background:#f1f5f9;">
   <main style="max-width:440px;margin:8vh auto;padding:2rem;background:white;border-radius:16px;border:1px solid #dbe3e8;">
     <h1 style="font-size:1.6rem;color:#1e3a8a;margin-bottom:1rem;">授權工作臺登入</h1>
-    <p style="line-height:1.6;color:#475569;">個案資料只供已授權的人員在本機示範環境檢視。本系統目前不會自動聯繫學生、學校或公家單位。</p>
+    <p style="line-height:1.6;color:#475569;">這裡是輔導人員專用的工作臺，個案資料只供已授權的人員檢視。本系統目前不會自動聯繫學生、學校或公家單位。</p>
     {% if disabled %}
       <p role="alert" style="color:#b91c1c;">尚未設定 WORKBENCH_PASSWORD，也還沒有任何工作臺帳號。請先設定 WORKBENCH_PASSWORD 後重新啟動，用帳號 admin 登入建立個人帳號。</p>
     {% else %}
@@ -17,12 +17,14 @@
       <form method="post" action="/login">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <label for="username" style="display:block;margin:1rem 0 .4rem;">帳號</label>
-        <input id="username" name="username" type="text" maxlength="30" autocomplete="username" placeholder="留白＝內建管理員 admin" style="width:100%;padding:.75rem;border:1px solid #94a3b8;border-radius:8px;">
+        <input id="username" name="username" type="text" maxlength="30" autocomplete="username" placeholder="個人帳號（用共用管理密碼登入時可留白）" style="width:100%;padding:.75rem;border:1px solid #94a3b8;border-radius:8px;">
         <label for="password" style="display:block;margin:1rem 0 .4rem;">密碼</label>
         <input id="password" name="password" type="password" required autocomplete="current-password" style="width:100%;padding:.75rem;border:1px solid #94a3b8;border-radius:8px;">
-        <label for="staff_name" style="display:block;margin:1rem 0 .4rem;">你的名字或代號（用內建管理員登入時填，記在操作紀錄，選填）</label>
+        <label style="display:flex;align-items:center;gap:.4rem;margin-top:.5rem;font-size:.9rem;color:#475569;"><input type="checkbox" onchange="document.getElementById('password').type = this.checked ? 'text' : 'password'"> 顯示密碼</label>
+        <label for="staff_name" style="display:block;margin:1rem 0 .4rem;">你的名字或代號（選填，會記在操作紀錄）</label>
         <input id="staff_name" name="staff_name" type="text" maxlength="20" autocomplete="name" style="width:100%;padding:.75rem;border:1px solid #94a3b8;border-radius:8px;">
-        <button type="submit" style="margin-top:1rem;padding:.8rem 1.2rem;border:0;border-radius:8px;background:#1e3a8a;color:white;cursor:pointer;">登入</button>
+        <button type="submit" style="margin-top:1.2rem;width:100%;min-height:48px;padding:.8rem 1.2rem;border:0;border-radius:8px;background:#1e3a8a;color:white;font-size:1rem;font-weight:600;cursor:pointer;">登入</button>
+        <p style="margin-top:.8rem;font-size:.85rem;color:#64748b;">忘記密碼請聯絡管理員重設；學生不需要登入，直接回學生端就能聊。</p>
       </form>
     {% endif %}
     <p style="margin-top:1.3rem;"><a href="/">返回學生端</a></p>

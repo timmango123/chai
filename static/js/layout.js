@@ -9,12 +9,12 @@
   "use strict";
   var LAYOUTS = {
     classic: { name: "原版", icon: "🧩", ref: "目前上線的版本",
-      desc: "對話在左、四張功能卡在右，上方列出全部按鈕。" },
-    focus: { name: "極簡專注", icon: "🎯", ref: "參考 Chatbot UI / Vercel AI Chatbot",
+      desc: "功能卡在左、對話在右，上方列出全部按鈕。" },
+    focus: { name: "極簡專注", icon: "🎯", ref: "畫面最乾淨",
       desc: "只留對話框，置中好閱讀；其他工具收進「☰ 更多」。" },
-    rail: { name: "左側導覽", icon: "📚", ref: "參考 Open WebUI / LibreChat",
+    rail: { name: "左側導覽", icon: "📚", ref: "適合電腦大螢幕",
       desc: "左邊一條精簡工具欄，右邊大對話框；說明文字收起來。" },
-    app: { name: "手機 App 風", icon: "📱", ref: "參考 Lobe Chat",
+    app: { name: "手機 App 風", icon: "📱", ref: "適合手機",
       desc: "整頁都是對話，底部分頁列切換檢核、喘口氣、求助。" }
   };
   var KEY = "anla_layout";
@@ -33,7 +33,11 @@
     try { fromUrl = new URLSearchParams(window.location.search).get("layout"); } catch (e) { /* 舊瀏覽器 */ }
     if (valid(fromUrl)) return fromUrl;
     var saved = readStore(KEY);
-    return valid(saved) ? saved : DEFAULT;
+    if (valid(saved)) return saved;
+    // 還沒選過版面的手機：原版的頁首會把輸入框、一鍵隱藏和求助電話擠到第二屏以後，
+    // 所以預設用「手機 App 風」（輸入框與 1925／119 都在第一屏）。選過的人照自己的選擇。
+    try { if (window.matchMedia("(max-width: 650px)").matches) return "app"; } catch (e) { /* 舊瀏覽器用原版 */ }
+    return DEFAULT;
   }
 
   // 在 <head> 就先標上版型，避免畫面先閃一下原版。
@@ -110,8 +114,20 @@
     sos.setAttribute("aria-label", "求助電話");
     sos.innerHTML = '<a href="tel:1925">📞 1925</a><a href="tel:119">🚨 119</a>';
 
+    // 一鍵隱藏固定放在頁首：任何版型、任何螢幕都不用捲動或打開抽屜就按得到。
+    var quickHide = document.createElement("button");
+    quickHide.type = "button";
+    quickHide.className = "layout-quick-hide";
+    quickHide.title = "一鍵切到小遊戲畫面";
+    quickHide.setAttribute("aria-label", "一鍵隱藏：切到小遊戲畫面");
+    quickHide.textContent = "🙈 隱藏";
+    quickHide.addEventListener("click", function () {
+      if (window.AnlaFlow && window.AnlaFlow.openGame) window.AnlaFlow.openGame(true);
+    });
+
     var bar = document.createElement("div");
     bar.className = "layout-header-bar";
+    bar.appendChild(quickHide);
     bar.appendChild(sos);
     bar.appendChild(menuButton);
     tools.appendChild(bar);
@@ -195,6 +211,19 @@
       drawerBody.appendChild(section("個人與設定"));
       park(meta, drawerBody);
     }
+    // 手機上投票鈕不浮在畫面上（會蓋住內容或分頁列），改從「更多」進入。
+    if (voteToggle) {
+      var voteEntry = document.createElement("button");
+      voteEntry.type = "button";
+      voteEntry.className = "layout-drawer-vote";
+      voteEntry.textContent = voteToggle.textContent;
+      voteEntry.addEventListener("click", function () {
+        closeDrawer();
+        if (votePanel && votePanel.hidden) voteToggle.click();
+      });
+      temps.push(voteEntry);
+      drawerBody.appendChild(voteEntry);
+    }
   }
 
   function setLayout(layout, remember) {
@@ -203,6 +232,7 @@
     arrange(layout);
     if (remember !== false) writeStore(KEY, layout);
     renderVotePanel();
+    fitChat();
     return layout;
   }
 
@@ -313,13 +343,30 @@
         votePanel.hidden = true;
         voteToggle.setAttribute("aria-expanded", "false");
         voteToggle.focus();
-      } else if (preview) setLayout(preview.getAttribute("data-preview"));
+      } else if (preview) {
+        setLayout(preview.getAttribute("data-preview"));
+        // 手機上面板會蓋住整個畫面：按「試用」後先收起來，才看得到正在試的版面。
+        var narrow = false;
+        try { narrow = window.matchMedia("(max-width: 650px)").matches; } catch (e) { /* 舊瀏覽器 */ }
+        if (narrow) {
+          votePanel.hidden = true;
+          voteToggle.setAttribute("aria-expanded", "false");
+        }
+      }
       else if (cast && voteEnabled) vote(cast.getAttribute("data-vote"));
     });
     document.body.appendChild(voteToggle);
     document.body.appendChild(votePanel);
     if (!voteEnabled) voteState = { counts: {}, total: 0, mine: null, loaded: true, error: "" };
     renderVotePanel();
+  }
+
+  // 對話框高度依「頁首實際高度」計算，輸入框才會落在第一屏內（頁首在窄螢幕會換成兩三行）。
+  function fitChat() {
+    var card = document.querySelector(".student-page .chat-card");
+    if (!card) return;
+    var top = Math.round(card.getBoundingClientRect().top + window.scrollY);
+    document.documentElement.style.setProperty("--chat-top", top + "px");
   }
 
   window.AnlaLayout = {
@@ -332,8 +379,21 @@
 
   document.addEventListener("DOMContentLoaded", function () {
     if (!document.body.classList.contains("student-page")) return;
-    buildChrome();
     buildVote();
+    buildChrome();
     setLayout(window.AnlaLayout.current(), false);
+    fitChat();
+    window.addEventListener("resize", fitChat);
+    // 沒選過版面的人：視窗在手機寬度與較寬之間切換（轉向、縮放視窗）時跟著換預設版面。
+    try {
+      var narrowQuery = window.matchMedia("(max-width: 650px)");
+      var follow = function () { if (!valid(readStore(KEY))) setLayout(narrowQuery.matches ? "app" : DEFAULT, false); };
+      if (narrowQuery.addEventListener) narrowQuery.addEventListener("change", follow);
+      else if (narrowQuery.addListener) narrowQuery.addListener(follow);
+    } catch (e) { /* 舊瀏覽器維持載入時的版面 */ }
+    if (window.ResizeObserver) {
+      var nav = document.querySelector(".student-navbar");
+      nav && new ResizeObserver(fitChat).observe(nav);
+    }
   });
 })();

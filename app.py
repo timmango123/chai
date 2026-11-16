@@ -605,6 +605,8 @@ def api_chat_state():
         "style_overridden_by_safety": bool((context or {}).get("dialogue_state", {}).get("style_overridden_by_safety")),
         "next_steps": student_next_steps(context),
         "school_referral_available": bool(session.get("school_referral_topics")),
+        # The page does not replay earlier messages after a reload (shared computers); it only says they are kept.
+        "has_conversation": bool(((context or {}).get("dialogue_state") or {}).get("history")),
     })
 
 
@@ -906,7 +908,7 @@ def api_assessment():
     alert = safety_alert(level)
     return jsonify({
         "message": ("已完成自填檢核。" + (STUDENT_ALERT_NOTICE if alert else
-                    "結果只存在這次的暫存；你同意分享後，摘要才會進入真人工作臺。")),
+                    "結果只存在這次的暫存；你同意分享後，摘要才會交給輔導人員。")),
         "safety_alert": alert,
         "result": assessment_feedback(triage, level),
         "help_draft": generate_help_seeking_draft(context["draft"]),
@@ -957,8 +959,8 @@ def api_referral_consent():
     is_referral = case["summary"]["student_consent"]["kind"] == "referral"
     response = {
         "recorded": True, "case_id": case["case_id"], "resources": resources,
-        "message": "你同意分享的摘要已存入本網站的真人工作臺，等待授權人員查看。"
-                   + ("" if case["student_email"] else "你沒有留下聯絡方式，工作人員無法主動聯絡你；想被聯絡可以補填信箱後再送一次。")
+        "message": "你同意分享的摘要已交給本網站的輔導人員，等待他們查看。"
+                   + ("" if case["student_email"] else "你沒有留下聯絡方式，輔導人員無法主動聯絡你；想被聯絡可以補填信箱後再送一次。")
                    + "目前沒有自動通知學校，也沒有接通或送交南投輔導中心；需要立即協助請直接打電話。",
         "notification_connected": False, "external_referral_sent": False,
     }

@@ -93,7 +93,7 @@
   function optionalContact(host, steps, afterSave = null) {
     const details = node("details", "", "optional-contact-fields");
     details.appendChild(node("summary", "補充學校／聯絡信箱（選填）"));
-    details.appendChild(node("p", "已填的資料會沿用。不填也可以分享摘要；若沒有聯絡方式，工作臺無法主動聯絡你。填寫不代表已通知學校，急需協助請直接打電話。"));
+    details.appendChild(node("p", "已填的資料會沿用。不填也可以分享摘要；若沒有聯絡方式，輔導人員沒辦法主動聯絡你。填寫不代表已通知學校，急需協助請直接打電話。"));
     const fields = {};
     for (const [key, label, type, max] of [
       ["student_school", "學校（選填）", "text", 100],
@@ -220,7 +220,7 @@
       showResources(output, data.resources);
       status(agreed && data.recorded ? "已記錄本次同意；尚未對外轉介。" : "你可以繼續聊，也可以先打電話。");
     } catch (error) {
-      status(error.message || "送出失敗，尚未確認是否存入工作臺；可重試，電話仍可直接使用。");
+      status(error.message || "送出失敗，還不確定輔導人員有沒有收到；可以再按一次，電話仍可直接使用。");
     } finally {
       setBusy(false);
     }
@@ -256,30 +256,28 @@
       bubble.appendChild(node("p", error.message || "字條暫時無法產生；需要時可以直接撥 1925。"));
     }
   }
+  // The note stays in its own bubble and is only a note: asking for it is not asking to share the conversation
+  // (2026-11-16 simulation: the consent question under the note read as a condition, and opening 「真人求助」
+  // afterwards removed the note). Sharing is a separate, clearly optional step that opens the help panel.
   function showTeacherNote(bubble, data) {
     if (data.next_steps) current = data.next_steps;
-    byId("nextStepChoices")?.remove();
-    byId("choiceStatus")?.remove();
-    const panel = node("section", "", "inline-support-result");
-    panel.id = "nextStepChoices";
+    bubble.querySelector(".teacher-note")?.remove();
+    const panel = node("section", "", "inline-support-result teacher-note");
     panel.setAttribute("aria-label", "給老師的字條");
-    const result = node("div", "");
-    result.id = "choiceOutput";
-    const message = node("p", "", "choice-note");
-    message.id = "choiceStatus";
-    message.setAttribute("role", "status");
-    panel.append(result, message);
-    bubble.appendChild(panel);
-    const output = byId("choiceOutput");
-    output.replaceChildren(node("p", "這是可以複製的字條，貼上後可以自行修改，目前尚未寄出。"));
-    textBox(output, data.draft, "字條");
+    panel.appendChild(node("p", "這張字條只在你的畫面上，沒有寄給任何人。可以先改成自己的話，再複製貼給想聯絡的老師。"));
+    const area = textBox(panel, data.draft, "字條");
+    const copied = node("p", "", "choice-note");
+    copied.setAttribute("role", "status");
+    panel.appendChild(copied);
+    panel.querySelector("button").addEventListener("click", () => {
+      copied.textContent = "已複製（如果沒有成功，文字已選取，可以按 Ctrl+C 或長按複製）。";
+      area.select();
+    });
     if (current?.consent_kind === "summary" && !current.recorded) {
-      preview(output, current);
-      optionalContact(output, current, steps => showTeacherNote(bubble, {...data, next_steps: steps}));
-      output.appendChild(node("p", "你同意把目前這份摘要和這次的完整對話紀錄交給真人工作臺查看嗎？"));
-      output.appendChild(button("我同意分享摘要與對話", () => consent(true), true));
-      output.appendChild(button("先不要", () => consent(false)));
+      panel.appendChild(node("p", "不知道要拿給誰？也可以另外請這裡的輔導人員幫忙，要不要都由你決定。", "choice-note"));
+      panel.appendChild(button("想請輔導人員幫忙", openHelp));
     }
+    bubble.appendChild(panel);
   }
   function render(steps, forceOpen = false) {
     if (!steps) return;
@@ -302,7 +300,7 @@
     panel.setAttribute("aria-label", "是否同意轉介");
     panel.replaceChildren(node("h3", "如果你願意，可以請真人一起幫忙"));
     if (steps.consent_kind === "referral") {
-      panel.appendChild(node("p", "為了你的安全，系統會把必要的安全資訊（不含暱稱、學校、聯絡方式與完整對話）送到真人工作臺。同意後，當前摘要、登錄資料，以及這次的完整對話紀錄（你說的話和安啦的回覆，到按下同意為止）也會存入本網站真人工作臺，產生尚未外送的轉介單，工作人員才有辦法聯絡你。之後再聊的內容不會自動分享。尚未接通輔導中心，也不會自動通知學校。"));
+      panel.appendChild(node("p", "為了你的安全，系統會把必要的安全資訊（不含暱稱、學校、聯絡方式與完整對話）交給本網站受過訓練的輔導人員。同意後，當前摘要、登錄資料，以及這次的完整對話紀錄（你說的話和安啦的回覆，到按下同意為止）也會交給輔導人員，並產生一份還沒有對外送出的轉介單，他們才有辦法聯絡你。之後再聊的內容不會自動分享。尚未接通輔導中心，也不會自動通知學校。"));
       preview(panel, steps);
       optionalContact(panel, steps);
       const label = node("label", "希望被稱呼的名字（選填）");
@@ -350,7 +348,7 @@
     panel.id = "nextStepChoices";
     panel.setAttribute("aria-label", "找真人幫忙");
     panel.appendChild(node("h3", "想找真人一起想辦法嗎？"));
-    panel.appendChild(node("p", "按下同意後，這次的摘要、你和安啦的完整對話（到按下同意為止），以及你選填的資料，會存入本網站的真人工作臺，由受過訓練的人員查看。目前不會自動通知學校或家人；沒有留下聯絡方式的話，工作人員沒辦法主動聯絡你。"));
+    panel.appendChild(node("p", "按下同意後，這次的摘要、你和安啦的完整對話（到按下同意為止），以及你選填的資料，會交給本網站受過訓練的輔導人員查看。目前不會自動通知學校或家人；沒有留下聯絡方式的話，輔導人員沒辦法主動聯絡你。"));
     panel.appendChild(node("p", "如果現在有立即危險，請直接打 119；想馬上找人談，可以打 1925（24 小時）。", "choice-note"));
     preview(panel, steps);
     const noteLabel = node("label", "想先讓老師知道的事（選填）");
@@ -373,7 +371,10 @@
     panel.append(nameLabel, name);
     if (steps.recorded) panel.appendChild(node("p", "這一版摘要已經記錄你的同意，尚未對外轉介。"));
     const chips = node("div", "", "choice-chips");
-    chips.append(button("我同意分享，請人聯絡我", () => consent(true, "request"), true),
+    // 沒留聯絡方式時沒有人能主動聯絡，按鈕不寫「請人聯絡我」。
+    const reachable = Boolean(steps.contact?.student_email);
+    if (!reachable) panel.appendChild(node("p", "你還沒有留聯絡信箱：想要有人主動聯絡你，請先在上面「補充學校／聯絡信箱」填寫。", "choice-note"));
+    chips.append(button(reachable ? "我同意分享，請人聯絡我" : "我同意分享給輔導人員", () => consent(true, "request"), true),
                  button("先不要", () => consent(false)));
     const message = node("p", "", "choice-note");
     message.id = "choiceStatus";

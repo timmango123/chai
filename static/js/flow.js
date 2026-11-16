@@ -555,6 +555,7 @@ window.AnlaFlow = (() => {
           if (round > ROUNDS) {
             phaseEl.textContent = "完成了";
             hint.textContent = "做得很好。身體有沒有比剛剛鬆一點點？想再做一次可以按「再做一次」。";
+            byId("breathAgain").textContent = "再做一次";
             count.textContent = "🌿";
             ball.style.transform = "scale(.7)";
             return;
@@ -565,6 +566,7 @@ window.AnlaFlow = (() => {
       show();
       breathTimer = setTimeout(tick, 1000);
     }
+    byId("breathAgain").textContent = "重新開始";
     ball.style.transitionDuration = "0s";
     ball.style.transform = "scale(.45)";
     requestAnimationFrame(() => { show(); breathTimer = setTimeout(tick, 1000); });

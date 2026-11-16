@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="安啦會客室">
-  <title>南投在地心理健康資源地圖 - 少年仔、安啦會客室</title>
+  <title>南投求助資源 - 少年仔、安啦會客室</title>
   <link rel="manifest" href="/manifest.json">
   <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/icon-192.png">
   <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
@@ -22,13 +22,13 @@
     <a href="/" class="nav-brand">
       <div class="nav-logo">📍</div>
       <div class="brand-text">
-        <h1>南投在地心理健康資源導航</h1>
+        <h1>南投求助資源</h1>
         <span class="brand-tag">整合 13 鄉鎮衛生所 ‧ 3區心衛中心 ‧ 身心科 ‧ 專線</span>
       </div>
     </a>
     <div class="nav-links">
-      <a href="/" class="nav-item">💬 心情尬聊</a>
-      <a href="/resources" class="nav-item active">📍 南投資源地圖</a>
+      <a href="/" class="nav-item">💬 回到會客室</a>
+      <a href="/resources" class="nav-item active">📍 南投求助資源</a>
       <a href="/offline" class="nav-item">🫧 離線呼吸練習</a>
       <label class="theme-picker">
         <span class="visually-hidden">畫面主題</span>
@@ -45,7 +45,7 @@
   <div class="container">
     
     <div style="margin-bottom: 1.5rem; text-align: center;">
-      <h2 style="font-size: 1.6rem; color: var(--primary-dark);">南投縣在地心理支持與求助資源資料庫</h2>
+      <h2 style="font-size: 1.6rem; color: var(--primary-dark);">南投縣在地心理支持與求助資源</h2>
       <p style="font-size: 0.95rem; color: var(--text-secondary); max-width: 750px; margin: 0.5rem auto;">
         這裡整理南投縣政府的公開資源與求助專線，會先依你登錄的鄉鎮顯示。
         費用、預約方式與服務對象請先電話詢問；網站沒有替你接通或送出轉介。若現在有立即危險，請撥打 119。
@@ -120,7 +120,7 @@
       const title = E(item.source_title || '機構公告');
       const source = /^https:\/\//.test(url)
         ? `<a href="${E(url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
-        : '原專案補充資料';
+        : '團隊整理';
       const checkedUrl = String(item.phone_source_url || '');
       const checked = item.phone_checked_at && /^https:\/\//.test(checkedUrl)
         ? `<br><a href="${E(checkedUrl)}" target="_blank" rel="noopener noreferrer">電話核對來源</a>（${E(item.phone_checked_at)}）` : '';
