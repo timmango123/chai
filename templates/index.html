@@ -182,15 +182,20 @@
 
         <!-- 資訊：隱私承諾＋南投資源（可展開） -->
         <details class="panel-card panel-fold side-tile" id="infoFold">
-          <summary><span class="side-tile-icon" aria-hidden="true">🛡️</span><span class="side-tile-text"><h3>資訊</h3><small>隱私承諾與南投資源</small></span></summary>
+          <summary><span class="side-tile-icon" aria-hidden="true">🛡️</span><span class="side-tile-text"><h3>資訊</h3><small>隱私承諾</small></span></summary>
           <ul class="panel-list">
             <li>對話只加密暫存，24 小時沒使用就自動清除；要你按下同意才會分享給輔導人員。</li>
             <li>怕被其他人看到，可使用<b>一鍵式隱藏</b>。</li>
             <li>不需要馬上留下個人資料，可在需要求助時再填寫。</li>
           </ul>
           <p class="panel-fine">對話只在伺服器加密暫存，最後使用 24 小時後自動清除。唯一例外：如果對話出現可能危及安全的內容，系統會把必要的安全資訊（不含暱稱、學校與聯絡方式）交給受過訓練的人員關心你，並在畫面上告訴你。</p>
-          <a href="/resources" target="_blank" rel="noopener" class="choice-chip side-tile-link">🗺️ 看南投資源</a>
         </details>
+
+        <!-- 南投資源求助（2026-11-17）：從「資訊」裡拉出來成為獨立按鈕，另開新分頁到 /resources -->
+        <a href="/resources" target="_blank" rel="noopener" id="resourcesTile" class="side-tile side-tile-resources" title="南投在地的求助單位、醫療與輔導資源（另開新分頁）">
+          <span class="side-tile-icon" aria-hidden="true">🗺️</span>
+          <span class="side-tile-text"><b>南投資源求助</b><small>在地求助單位與輔導資源</small></span>
+        </a>
 
         <!-- 真人求助（2026-11-17 回饋）：生命線 LINE 文字協談、真人專線、求救小卡，原本的轉介單保留在最後一項。 -->
         <details class="panel-card panel-fold side-tile side-tile-help" id="helpFold">

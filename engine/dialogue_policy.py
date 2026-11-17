@@ -13,7 +13,6 @@ POLICY_VERSION = "satir-2026-10-19.2"
 WEIGHTS = {"green": 1, "yellow": 2, "orange": 3, "red": 4}
 STAGES = ("event", "feeling", "perception", "expectation", "yearning", "self")
 # 「不知道」「還沒想到」 as an answer (compacted text, so short answers only).
-PAST_ANSWER = r"以前|之前|上次|上一次|國小|國中的時候|小時候|曾經|也有(?:一次|過)|也是這樣|有啊|沒有過|沒發生過|第一次"
 UNKNOWN_ANSWER = r"^(?:我|嗯|呃|就)?(?:也|還|真的)?(?:不知道|不曉得|不清楚|沒想法|沒想到|想不到|還沒想|沒頭緒)(?:耶|欸|啊|啦|吧|要怎麼辦|怎麼辦|該怎麼辦)?$"
 RISK_TYPES = ("none", "self_harm", "suicide", "abuse", "violence", "digital_sexual_violence", "other")
 REPLY_STYLES = ("warm", "lively", "humor", "rational", "listen_only")
@@ -21,6 +20,12 @@ REPLY_STYLES = ("warm", "lively", "humor", "rational", "listen_only")
 REACTION_DOUBT = r"真的(?:嗎|假的|喔|哦)?|真假|是喔|是哦|是嗎|有嗎|會嗎|你確定(?:嗎)?|是這樣嗎|蛤|騙人|最好是"
 REACTION_ASK = r"為什麼|為啥|怎麼說|什麼意思|啥意思|然後呢|所以呢|例如呢|比如說呢?"
 LOW_REPLIES = {"不知道", "我不知道", "不曉得", "嗯", "嗯嗯", "喔", "哦", "沒事", "還好", "差不多吧", "不知道怎麼說", "說不上來"}
+# 2026-11-17 user feedback: 「只想說說」 keeps the conversation on listening; a plain yes to 「要不要一起想辦法」 is
+# the only short answer that counts as accepting help (「不知道」「嗯」「有啊」 never do).
+JUST_TALK = (r"只(?:是)?想(?:先)?(?:說說|講講|聊聊|說一說|講一講|抱怨|吐苦水|發洩|說出來|講出來)|(?:說說|講講|聊聊)(?:而已|就好)"
+             r"|不(?:用|要|需要)(?:給我|幫我想)?.{0,4}(?:建議|方法|辦法)|先不用想(?:辦法|怎麼做)")
+ACCEPT_OFFER = (r"(?:嗯|恩)?(?:好|要|想|可以|ok|行)(?:啊|呀|喔|哦|吧|的|阿)?(?:謝謝)?|想聽(?:看看)?"
+                r"|(?:想)?(?:幫我|一起)想(?:想|看看|辦法)?(?:吧|好了)?")
 BOUNDARY = r"不想(?:再)?(?:講|說|談)|不要(?:再|一直)?問|別(?:再|一直)?問|不想(?:一直)?被問|關你什麼事|只想.{0,4}(?:聽|陪)|只要.{0,4}(?:聽|陪)"
 HIGH_EMOTION = r"哭到|哭不停|哭得停不下|一直哭|暴怒|氣到發抖|恐慌|腦袋一片空白|完全無法思考|快崩潰|全部的人都在針對我|閉嘴"
 FEELING = r"難過|失望|委屈|生氣|超煩|很煩|焦慮|害怕|心慌|緊張|心情不好|低落|尷尬|丟臉|孤單|疲累|很累|開心|擔心|不敢|胃痛|空空|想哭|挫折|沮喪|傷心"
@@ -677,6 +682,15 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
         r"|刪(?:掉|除).{0,6}(?:紀錄|記錄|對話|資料)|關掉.{0,6}(?:就)?(?:沒了|消失)", message))
     state["confidentiality_limit_needed"] = state["privacy_concern"] or state["safety_override"]
     state["advice_request"] = wants_practical_help(message)
+    said_just_talk = bool(re.search(JUST_TALK, message))
+    state["just_talk"] = bool(old.get("just_talk") or said_just_talk)
+    # Help is given on an explicit request, or a plain yes right after we asked whether they want to think of ways.
+    accepted_offer = (old.get("current_goal") == "offer_next_step" and old.get("ask_question")
+                      and not said_just_talk and bool(re.fullmatch(ACCEPT_OFFER, text, re.I)))
+    if accepted_offer:
+        state["advice_request"] = True
+    unknown = bool(re.search(UNKNOWN_ANSWER, text))
+    state["unknown_streak"] = old.get("unknown_streak", 0) + 1 if unknown else 0
     state["info_request"] = asks_information(message)
     # 「我說的是未來3天之後」 corrects the last reply just like 「不是啦」 (2026-10-23 live test).
     correction = bool(re.search(r"^(?:不是|不對)|你誤會|你聽錯|你搞錯|不是那個意思|我不是.{0,6}[，,].*(?:是|而是)"
@@ -712,16 +726,21 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
         if key in observations or re.search(pattern, message):
             state[key + "_summary"] = observations.get(key, {}).get("evidence", message[:240])
     state["iceberg_stage"] = found[-1] if found else old.get("iceberg_stage", "unknown")
+    # Good news only (「開心」, no distress word so far): nothing 「最掛心」 to ask about, and no help to offer.
+    feelings = state["feeling_summary"]
+    only_good_news = bool(re.search(r"開心|高興|快樂|期待|興奮", feelings)
+                          and not re.search(FEELING.replace("|開心", ""), feelings))
     goal, strategy, ask = "clarify_event", "clarify", True
     if state["safety_check_required"]:
         goal, strategy, ask = "safety_support", "safety_check", True
     elif state["emotion_intensity"] == "high":
         goal, strategy, ask = "stabilize", "reflect_only", False
-    elif (not state["boundary_active"] and re.search(UNKNOWN_ANSWER, text) and not old.get("unknown_help_given")
-          and (old.get("asked_plan") or state["uncertainty_streak"] >= 2)):
-        # Flow chart: 「不知道」 to how they will handle it gets a couple of small things to try and a nudge toward a
-        # person (2026-11-01 live simulation: most AI replies only said 「想到再說」).
-        goal, strategy, ask = "suggest_after_unknown", "support_next_step", False
+    elif (not state["boundary_active"] and unknown
+          and (state["unknown_streak"] == 1 or (state["unknown_streak"] == 2 and not old.get("unknown_options_given")))):
+        # 2026-11-17 user feedback: 「不知道」 is not consent to advice. First time: an easier turn (respond to what
+        # was already said, or allow a pause). Second time in a row: two tentative readings, 「都不是」 allowed, once.
+        # After that the boundary branch below stops asking.
+        goal, strategy, ask = "ease_unknown", "lower_difficulty", state["unknown_streak"] == 2
     elif state["boundary_active"] or state["conversation_willingness"] == "low" or state["uncertainty_streak"] >= 2:
         goal, strategy, ask = "respect_boundary", "respect_boundary", False
     elif state["privacy_concern"]:
@@ -734,6 +753,8 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
         goal, strategy, ask = "integrate", "reflect_only", False
     elif state["advice_request"]:
         goal, strategy, ask = "support_choice", "support_next_step", False
+    elif said_just_talk:
+        goal, strategy, ask = "keep_listening", "reflect_only", False
     elif state["info_request"]:
         # v2.8 harness: a question about facts or ways (「電子煙有什麼影響」「15 歲可以打工嗎」) gets an answer.
         goal, strategy, ask = "answer_question", "inform", True
@@ -746,12 +767,19 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
         goal, strategy, ask = "respond_to_reaction", "reflect_only", False
     elif short:
         goal, strategy, ask = "explore_feeling", "reflect_only", False
-    elif replied and state["known_event"] and state["known_feeling"] and not old.get("asked_past"):
-        # Flow chart branch B (2026-11-01): once the event and the feeling are out, ask whether something similar
-        # happened before (and what helped), then what they plan to do; 「不知道」 then gets small steps.
-        goal, strategy = "explore_past", "reflect_then_ask"
-    elif state["known_event"] and old.get("asked_past") and not old.get("asked_plan"):
-        goal, strategy = "explore_plan", "reflect_then_ask"
+    elif (replied and state["known_event"] and state["known_feeling"] and not old.get("asked_concern")
+          and not only_good_news):
+        # 2026-11-17 user feedback (replaces the 2026-11-01 「以前有遇過嗎 → 打算怎麼處理」 questions): once the event
+        # and the feeling are out, ask which part weighs most; only after that, ask once whether they want to
+        # think of ways together or just talk.
+        goal, strategy = "explore_concern", "reflect_then_ask"
+    elif (state["known_event"] and old.get("asked_concern") and not old.get("offered_help")
+          and not state["just_talk"] and not only_good_news):
+        if old.get("current_goal") == "explore_concern" and old.get("ask_question"):
+            # The turn right after the question: respond to the answer first, without another question.
+            goal, strategy, ask = "explore_concern", "reflect_only", False
+        else:
+            goal, strategy = "offer_next_step", "reflect_then_ask"
     else:
         for known, next_goal in (("expectation", "explore_yearning"), ("perception", "explore_expectation"),
                                  ("feeling", "explore_perception"), ("event", "explore_feeling")):
@@ -760,10 +788,7 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
                 break
     recent = [t["text"] for t in turns if t["role"] == "assistant"][-2:]
     # The rest after two questioning turns does not apply when the student is correcting a misreading.
-    # Once the student has answered the past question, the flow chart's plan question follows; resting there
-    # meant it was never asked (2026-11-01 Render round 2: 6 of 12 branch-B stories never heard it).
-    answered_past = goal == "explore_plan" and bool(re.search(PAST_ANSWER, message))
-    if goal not in ("safety_support", "repair_understanding") and not answered_past and len(recent) == 2 and all(re.search(r"[？?]", r) for r in recent):
+    if goal not in ("safety_support", "repair_understanding", "ease_unknown") and len(recent) == 2 and all(re.search(r"[？?]", r) for r in recent):
         ask, strategy = False, "reflect_only"
     # v2.3 reply styles are the student's choice; any safety check takes the tone back (safety override).
     style = reply_style if reply_style in REPLY_STYLES else old.get("reply_style") if old.get("reply_style") in REPLY_STYLES else "warm"
@@ -778,14 +803,14 @@ def build_state(message, triage, previous=None, hints=None, history=None, reply_
     state.update(reply_style=style, style_overridden_by_safety=overridden,
                  effective_style="safety" if overridden else style)
     state.update(current_goal=goal, response_strategy=strategy, ask_question=ask, max_questions=int(ask))
-    state["asked_past"] = bool(old.get("asked_past") or (goal == "explore_past" and ask))
-    state["asked_plan"] = bool(old.get("asked_plan") or (goal == "explore_plan" and ask))
-    state["unknown_help_given"] = bool(old.get("unknown_help_given") or goal == "suggest_after_unknown")
+    state["asked_concern"] = bool(old.get("asked_concern") or (goal == "explore_concern" and ask))
+    state["offered_help"] = bool(old.get("offered_help") or (goal == "offer_next_step" and ask))
+    state["unknown_options_given"] = bool(old.get("unknown_options_given") or (goal == "ease_unknown" and ask))
     banned = ["ask_multiple_questions", "diagnose", "interpret_for_user", "force_positive", "promise_absolute_confidentiality", "minimize_risk"]
-    if goal not in ("support_choice", "answer_question", "suggest_after_unknown") or no_advice:
+    if goal not in ("support_choice", "answer_question") or no_advice:
         banned.append("give_advice")
     if goal in ("safety_support", "stabilize", "respect_boundary", "establish_safety", "integrate", "respond_to_reaction",
-                "repair_understanding"):
+                "repair_understanding", "ease_unknown", "keep_listening"):
         banned.extend(("explore_yearning", "deep_reflection", "continue_drilling"))
     state["forbidden_actions"] = banned
     return state

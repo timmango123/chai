@@ -308,6 +308,18 @@ def database_busy(exc):
                     "show_urgent_help": session.get("highest_risk") == "red"}), 503
 
 
+@app.errorhandler(500)
+def internal_error(exc):
+    """An unexpected error on an API call still answers in JSON the page can show, with the help lines,
+    instead of the server's HTML page (which the page could only report as a JSON parse error)."""
+    logging.exception("未預期的錯誤：%s", request.path)
+    if request.path.startswith("/api/"):
+        return jsonify({"error": "系統暫時出了點問題，這次沒有送出。請稍後再試；需要立即協助請撥 1925 安心專線（24 小時），"
+                                 "有立即危險請撥 119。",
+                        "show_urgent_help": session.get("highest_risk") == "red"}), 500
+    return "系統暫時出了點問題，請稍後再試。需要立即協助請撥 1925（24 小時），有立即危險請撥 119。", 500
+
+
 @app.errorhandler(404)
 def page_not_found(exc):
     """A mistyped address shows a page in the site's own words with a way back and the help lines, not the

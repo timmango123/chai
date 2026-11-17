@@ -17,7 +17,7 @@ class AiConfigTests(unittest.TestCase):
         self.assertIn("Gemini", reply["model_used"])
         payload = post.call_args.kwargs["json"]
         self.assertEqual(payload["generationConfig"]["temperature"], Config.LLM_TEMPERATURE)
-        self.assertIn("1–4 個短句", payload["systemInstruction"]["parts"][0]["text"])
+        self.assertIn("2–4 個短句", payload["systemInstruction"]["parts"][0]["text"])
 
     def test_red_reply_does_not_call_model(self):
         with patch("engine.ai_agent.requests.post") as post:

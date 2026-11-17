@@ -105,9 +105,15 @@ class PolicyScenarios(unittest.TestCase):
 
     def test_boundaries_uncertainty_and_reengagement(self):
         _, state, _ = turn('我告白被打槍')
-        for message in ('不知道', '不知道', '不要問了', '嗯'):
+        for index, message in enumerate(('不知道', '不知道', '不知道', '不要問了', '嗯')):
             _, state, reply = turn(message, state)
-            self.assertNotIn('？', reply)
+            if index == 1:
+                # Second 「不知道」 in a row: two tentative readings, once, with 「都不是」 allowed (2026-11-17 feedback).
+                self.assertEqual(reply.count('？'), 1)
+                self.assertIn('都不是也可以', reply)
+            else:
+                self.assertNotIn('？', reply)
+            self.assertIn('give_advice', state['forbidden_actions'])
         self.assertEqual(state['current_goal'], 'respect_boundary')
         _, state, reply = turn('其實我想跟你說，昨天老師罵我，讓我很難過', state)
         self.assertFalse(state['boundary_active'])

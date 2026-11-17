@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """v2.11：2026-11-01 線上試用回饋——開場改為心情＋程度 1–5、拿掉長開場白與角色說明、喘口氣卡片、
-輕微同儕摩擦第二次提到才出現輔導室卡片、紅燈再次出現時重新打開四個按鈕、對話會問「以前有類似經驗嗎」「打算怎麼處理」。"""
+輕微同儕摩擦第二次提到才出現輔導室卡片、紅燈再次出現時重新打開四個按鈕。
+（「以前有類似經驗嗎 → 打算怎麼處理 → 不知道就給方法」的固定流程已依 2026-11-17 使用者反饋移除，
+新流程的測試在 tests/test_feedback_pacing_v20261117.py。）"""
 from pathlib import Path
 
 from engine.dialogue_policy import build_state
@@ -39,42 +41,6 @@ class UrgentAgainTests(RouteBase):
         self.assertFalse(calm["urgent_new"])                             # but 「我很安全」 is not reopened
 
 
-class PastAndPlanQuestionTests(RouteBase):
-    def test_after_the_story_it_asks_about_before_and_then_the_plan(self):
-        state = {}
-        goals = []
-        turns = ["我今天在學校被老師當全班的面罵，覺得很丟臉", "因為我作業沒交，可是我前一天在照顧生病的妹妹",
-                 "我覺得很委屈", "有啊國小的時候也有一次", "還沒想到"]
-        for message in turns:
-            triage = perform_triage(text=message, previous_level="green")
-            history = state.get("history", [])
-            state = build_state(message, triage, state, history=history)
-            goals.append(state["current_goal"])
-            state["history"] = history + [{"role": "user", "text": message}, {"role": "assistant", "text": "嗯，我在聽。"}]
-            state["last_reply"] = "嗯，我在聽。"
-        self.assertNotEqual(goals[0], "explore_past")                   # not on the very first message
-        self.assertIn("explore_past", goals)
-        self.assertIn("explore_plan", goals)
-        self.assertLess(goals.index("explore_past"), goals.index("explore_plan"))
-        self.assertEqual(goals.count("explore_past"), 1)
-
-    def test_the_plan_question_is_asked_even_after_two_questioning_replies(self):
-        # 2026-11-01 Render round 2: real replies end with a question, so the "rest" rule silenced the plan
-        # question and 「不知道」 never reached the small steps.
-        for lines in (["今天上課被老師當全班的面罵，因為我作業沒交", "覺得很丟臉，也很委屈",
-                       "國小的時候也有一次，那時候是回家哭一哭就好了", "還不知道"],
-                      ["我昨天跟男朋友分手了", "心裡空空的，一直想哭", "之前沒有過", "不知道"]):
-            state, goals = {}, []
-            for message in lines:
-                history = state.get("history", [])
-                state = build_state(message, perform_triage(text=message, previous_level="green"), state, history=history)
-                goals.append((state["current_goal"], state["ask_question"]))
-                state["history"] = history + [{"role": "user", "text": message},
-                                              {"role": "assistant", "text": "聽起來很不好受。你願意多說一點嗎？"}]
-            self.assertEqual(goals[1:], [("explore_past", True), ("explore_plan", True),
-                                         ("suggest_after_unknown", False)])
-
-
 class PageTests(RouteBase):
     def test_the_page_opens_with_the_mood_question_only(self):
         page = self.student()[0].get("/").get_data(as_text=True)
@@ -103,24 +69,6 @@ class SimulationFindingsTests(RouteBase):
             self.assertEqual(detect_topics(message), ["bullying"], message)
         for message in ("笑死我了", "我們又在笑那部影片", "爸爸又在罵我", "媽媽又在笑我胖"):
             self.assertEqual(detect_topics(message), [], message)
-
-    def test_unknown_after_the_plan_question_gets_small_steps_and_a_person(self):
-        from engine.dialogue_reply import local_reply
-        state = {}
-        for message in ["今天在學校被老師當全班的面罵，覺得很丟臉", "因為我作業沒交，可是我前一天在照顧生病的妹妹",
-                        "有啊國小的時候也有一次", "我也覺得很委屈", "不知道"]:
-            history = state.get("history", [])
-            state = build_state(message, perform_triage(text=message, previous_level="green"), state, history=history)
-            state["history"] = history + [{"role": "user", "text": message}, {"role": "assistant", "text": "嗯。"}]
-            state["last_reply"] = "嗯。"
-        self.assertTrue(state["asked_plan"])
-        self.assertEqual(state["current_goal"], "suggest_after_unknown")
-        self.assertNotIn("give_advice", state["forbidden_actions"])
-        reply = local_reply("不知道", state)
-        self.assertIn("輔導老師", reply)
-        state["history"] += [{"role": "user", "text": "不知道"}]
-        again = build_state("不知道", perform_triage(text="不知道", previous_level="green"), state, history=state["history"])
-        self.assertEqual(again["current_goal"], "respect_boundary")      # once; then it stops pushing
 
     def test_a_blocked_privacy_reply_sends_the_reviewed_text(self):
         from engine import dialogue_ai

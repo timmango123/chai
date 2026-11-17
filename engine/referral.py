@@ -277,7 +277,8 @@ def record_student_consent(context_id, email_hash, revision, kind, preferred_nam
             if existing and context.get("consented_revision") == revision:
                 return existing
             profile = context["profile"]
-            draft = context["draft"]
+            # A student may ask for a person before saying anything: the draft is still empty then.
+            draft = {"triage": {"level": "green", "label": "一般支持"}, "risk_level": "green", **context["draft"]}
             now = datetime.now(timezone.utc).isoformat()
             status = {"referral": "student_requested_referral", "request": "student_requested_help"}.get(
                 kind, "student_shared_summary")

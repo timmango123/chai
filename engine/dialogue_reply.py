@@ -334,12 +334,18 @@ def _natural_reflection(message, state=None):
 def _local_reply(message, state):
     goal = state["current_goal"]
     echo = _natural_reflection(message, state)
-    if goal in ("respect_boundary", "suggest_after_unknown"):
+    if goal == "ease_unknown":
+        # 2026-11-17 user feedback: 「不知道」 is not a request for advice. Allow a pause first; the second time,
+        # two tentative readings the student can reject.
+        if state["ask_question"]:
+            return "沒關係，一時說不上來很正常。比較像是「還沒想清楚」，還是「現在不太想談這個」？都不是也可以，照你的說法就好。"
+        return "沒關係，不知道也可以，不用現在想出答案。想先停一下，或說點別的，都可以。"
+    if goal == "respect_boundary":
         if state["boundary_active"]:
             return "好，我不追問，也不用現在把事情弄懂。想先停一下，或換個話題，都可以。"
-        # Flow chart: an answer of 「不知道」 gets a couple of things to try and a nudge toward a person (2026-10-31).
-        return ("沒關係，說不上來也很正常，不用現在弄懂。想試點什麼的話：可以先把現在的感覺寫下一兩個詞，或起來走一走、喝點水。"
-                "也可以找一位信任的大人或輔導老師聊聊，不用一個人想。")
+        return "沒關係，說不上來也很正常，不用現在弄懂。想先停一下，或之後想到再說，都可以。"
+    if goal == "keep_listening":
+        return "好，那就先說說，不急著想辦法。" + _fresh(state, LISTENING)
     if goal == "stabilize":
         return echo + "現在先不用整理原因，也不急著做決定。我先聽，這輪不再加問題。"
     if goal == "establish_safety":
@@ -354,10 +360,12 @@ def _local_reply(message, state):
         door = "之後如果哪天真的冒出這種念頭，隨時可以跟我說，1925 二十四小時都有人接。"
         if re.search(CLARIFIED, message) or is_positive_only(message):
             # The student clarified a figure of speech; return to the light conversation they were having.
-            return "好，了解，剛剛只是誇張的形容。" + (echo if is_positive_only(message) else "那就照你的節奏聊就好。") + door
-        return ("好，謝謝你老實回答我，我不會一直追問。" + door +
+            return ("好，了解，剛剛只是誇張的形容。" + (echo if is_positive_only(message) else "那就照你的節奏聊就好。")
+                    + "\n\n" + door)
+        # The safety reminder is its own paragraph, not a clause inside the ordinary reply (2026-11-17 feedback).
+        return ("好，謝謝你老實回答我，我不會一直追問。" +
                 ("你說覺得自己沒用，那份自責還是值得被聽見；一件事的結果不能代表你整個人的價值。" if re.search(r"沒用|超廢|沒人要", message)
-                 else "剛才那份不好受仍可以繼續說。"))
+                 else "剛才那份不好受仍可以繼續說。") + "\n\n" + door)
     if state.get("corrections") and state["corrections"][-1] == message[:240]:
         return echo + "剛才是我沒有聽準，我先收回那個解讀，照你現在說的來。"
     if goal == "respond_to_reaction":
@@ -423,8 +431,8 @@ def _local_reply(message, state):
         "clarify_event": "哪一件事讓你最在意？",
         # Open, not leading: 「比較像失望」 chose the answer for the student (counselling review).
         "explore_feeling": "那時候你心裡是什麼感覺？想說再說。",
-        "explore_past": "以前有遇過類似的情況嗎，那時候是怎麼撐過來的？",
-        "explore_plan": "這件事你自己有打算怎麼處理嗎？",
+        "explore_concern": "這件事裡，最讓你掛心的是哪一部分？",
+        "offer_next_step": "要不要一起想想接下來可以怎麼做？只想先說說也可以。",
         "explore_perception": "這件事讓你怎麼看自己或對方？",
         "explore_expectation": "你原本希望對方怎麼回應你？",
         "explore_yearning": "如果對方願意這樣做，對你最重要的是什麼？",
@@ -501,6 +509,45 @@ def drop_trailing_questions(reply, keep=0):
     return kept if kept != reply.strip() else None
 
 
+# 「是 A，還是 B？」 or a tacked-on 「還是你也說不上來？」 right after the real question.
+OPTION_FOLLOW_UP = (r"^(?:(?:還是|或是|或者)[^？?]*|(?:是|像是|比如|例如)[^？?]*(?:還是|或是|或者)[^？?]*)[？?]+$")
+GUESS_OPENERS = (("會不會是", "也許是"), ("會不會", "也許"), ("是不是", "也許是"))
+
+
+def one_question(reply, budget=1):
+    """At most one question mark in an ordinary reply (2026-11-17 feedback; two live rounds on 2026-11-18 showed the
+    prompt alone leaves 2–3 replies in 30 with two). In order, and only as far as needed:
+    1. a second question that only lists options for the one before it (「…最放不下？是 A，還是 B？」) is dropped;
+    2. an earlier tentative guess (「會不會有點不被看見？」) becomes a statement (「也許有點不被看見。」);
+    3. any other earlier question is dropped, keeping the last one.
+    Returns the reply unchanged when nothing needs fixing, when a quote contains a question mark, or when the
+    result would be too short to stand on its own. Not for safety replies or the rational three-line format."""
+    if budget != 1 or len(re.findall(r"[？?]", reply)) <= 1 or re.search(r"[？?]", "".join(re.findall(QUOTED, reply))):
+        return reply
+    tokens = re.findall(r"[^。！？!?\n]*[。！？!?]+|\n+|[^。！？!?\n]+", reply)
+    asks = lambda: [i for i, t in enumerate(tokens) if re.search(r"[？?]", t)]
+    # 1. option lists that directly follow a question
+    for i in reversed(asks()[1:]):
+        earlier = next((t for t in reversed(tokens[:i]) if t.strip()), "")
+        if re.search(r"[？?]", earlier) and re.search(OPTION_FOLLOW_UP, tokens[i].strip()):
+            tokens[i] = ""
+            # 「都不是也可以」 refers to the options that were just removed.
+            after = next((j for j in range(i + 1, len(tokens)) if tokens[j].strip()), None)
+            if after is not None and tokens[after].strip().startswith("都不是"):
+                tokens[after] = ""
+    # 2. earlier guesses become statements
+    for i in asks()[:-1]:
+        for opener, statement in GUESS_OPENERS:
+            if opener in tokens[i]:
+                tokens[i] = re.sub(r"[？?]+", "。", tokens[i].replace(opener, statement, 1))
+                break
+    # 3. keep the last question
+    for i in asks()[:-1]:
+        tokens[i] = ""
+    result = re.sub(r"\n{3,}", "\n\n", "".join(tokens)).strip()
+    return result if len(result) >= max(20, len(reply.strip()) // 3) else reply
+
+
 # Lines that decide for the student what they feel or need (2026-10-23 feedback: replies felt 自以為是).
 PRESUMPTUOUS = (r"一定(?:很|是|會|不太|超|非常)|肯定(?:很|是|會)|其實你|你其實|你只是|說穿了|說到底|你要知道|相信我"
                 r"|我(?:完全|都|真的)?(?:懂|明白|知道)(?:你|這種|你的感受)|我能理解你的感受|你(?:真正)?需要的是|你缺的是"
@@ -536,6 +583,18 @@ def assumed_state(reply, state, message):
 
 # Humility the prompt asks the model to hold, said out loud instead (2026-10-23 live test: 「我不在你家，沒辦法替你下答案」).
 DISCLAIMER = r"我(?:又)?不在(?:你家|現場|你身邊|那裡)|我沒辦法替你下(?:答案|結論|定論)|我不能替你下(?:答案|結論)"
+
+
+# Praise for having got through something the student never said they got through (2026-11-17 feedback:
+# 「有過」 was answered with 「你很堅強」「你一路走過來」).
+UNEARNED_PRAISE = (r"你(?:真的|其實|一直)?(?:很|好|超|非常)(?:堅強|勇敢)|一路(?:走|撐|熬|挺)(?:了)?過來|你(?:也|已經|都|還是|自己)*(?:撐|熬|挺|走)過來了"
+                   r"|你(?:已經|成功)?克服")
+PRAISE_MENTIONED = r"堅強|勇敢|撐過|熬過|挺過|走過來|克服"
+
+
+def unearned_praise(reply, state, message):
+    said = " ".join([message, *(t.get("text", "") for t in (state or {}).get("history", []) if t.get("role") == "user")])
+    return bool(re.search(UNEARNED_PRAISE, re.sub(QUOTED, "", reply or "")) and not re.search(PRAISE_MENTIONED, said))
 
 
 def presumptuous(reply):
@@ -631,6 +690,8 @@ def response_violations(reply, state, message="", offer=None):
         issues.append("assumed_state")
     if re.search(DISCLAIMER, body):
         issues.append("disclaimer")
+    if unearned_praise(body, state, message):
+        issues.append("unearned_praise")
     old_questions = re.findall(r"[^。！？!?\n]*[？?]", previous)
     if any(q.strip() in [old.strip() for old in old_questions] for q in questions):
         issues.append("repeated_question")

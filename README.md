@@ -1,6 +1,8 @@
 # 少年仔、安啦會客室：AI 陪伴與風險預警原型
 
-目前原始碼版本：**v2.11.2**。決賽展示準備見 [docs/FINALS_READINESS.md](docs/FINALS_READINESS.md)。開發依據為重新撰寫的 [docs/專案開發計畫_v3.md](docs/專案開發計畫_v3.md)（取代 Gemini 撰寫的 v2.3 計畫）。版本變更見 [docs/CHANGELOG.md](docs/CHANGELOG.md)，9.5 分閉環審查結果見 [EVALUATION_REPORT_95.md](EVALUATION_REPORT_95.md)，文獻依據見 [docs/THEORETICAL_FOUNDATIONS.md](docs/THEORETICAL_FOUNDATIONS.md)，各平台安裝見 [docs/PLATFORMS.md](docs/PLATFORMS.md)，線上網站（Render）與下載安裝版（GitHub Releases）的部署見 [docs/DEPLOY.md](docs/DEPLOY.md)，與計畫書的逐項對照見 [docs/PROPOSAL_ALIGNMENT.md](docs/PROPOSAL_ALIGNMENT.md)，專業人員審閱包見 [docs/PROFESSIONAL_REVIEW.md](docs/PROFESSIONAL_REVIEW.md)。
+目前原始碼版本：**v2.11.2**。決賽展示準備見 [docs/FINALS_READINESS.md](docs/FINALS_READINESS.md)。開發依據為重新撰寫的 [docs/專案開發計畫_v3.md](docs/專案開發計畫_v3.md)（取代 Gemini 撰寫的 v2.3 計畫）。版本變更見 [docs/CHANGELOG.md](docs/CHANGELOG.md)，9.5 分閉環審查結果見 [EVALUATION_REPORT_95.md](EVALUATION_REPORT_95.md)，文獻依據見 [docs/THEORETICAL_FOUNDATIONS.md](docs/THEORETICAL_FOUNDATIONS.md)，線上網站（Render）的部署見 [docs/DEPLOY.md](docs/DEPLOY.md)，手機加入主畫面（PWA）見 [docs/PLATFORMS.md](docs/PLATFORMS.md) 第五節，與計畫書的逐項對照見 [docs/PROPOSAL_ALIGNMENT.md](docs/PROPOSAL_ALIGNMENT.md)，專業人員審閱包見 [docs/PROFESSIONAL_REVIEW.md](docs/PROFESSIONAL_REVIEW.md)。
+
+**交付形式：網頁版**（2026-11-18 決定）。用瀏覽器開啟即可使用，手機可用 PWA 加入主畫面；不提供安裝檔。先前的桌面視窗與安裝檔打包程式仍留在專案中，但已停止維護、不列入交付。
 
 提供學生對話（四種回覆風格）、語音輸入／朗讀、南投資源、離線求助卡、模擬案例測試、燈號判讀說明，以及需密碼登入的真人覆核工作臺。
 
@@ -15,7 +17,7 @@
 3. 詢問 AI 服務的 API 金鑰：Gemini、Claude、OpenAI、DeepSeek、Groq、OpenRouter、xAI、Mistral 或任何 OpenAI 相容服務都可以，依金鑰開頭自動判斷；判斷不出時會讓你選擇。直接按 Enter 則不接 AI：學生傳訊時只會看到「尚未接上 AI」的說明與求助電話（危險訊息仍有固定安全文字）。
 4. 伺服器啟動後自動開啟瀏覽器 <http://127.0.0.1:5000/>。關閉視窗或按 `Ctrl+C` 即停止。
 
-密碼與金鑰只存在該視窗的記憶體，不寫入任何檔案。改埠號可執行 `start.bat -Port 5002`；桌面版視窗請見 `docs/PLATFORMS.md`（`desktop_launcher.py`）。
+密碼與金鑰只存在該視窗的記憶體，不寫入任何檔案。改埠號可執行 `start.bat -Port 5002`。
 
 ## 專案結構
 
@@ -23,7 +25,7 @@
 anla-youth-v1.3-A.1/
 ├─ start.bat                    雙擊一鍵啟動
 ├─ app.py, config.py            Flask 路由與環境變數設定
-├─ desktop_launcher.py          桌面原生視窗（pywebview）與系統列圖示；build_desktop.py 打包 .exe／.app
+├─ desktop_launcher.py          （已停止維護、不列入交付）桌面原生視窗；build_desktop.py 打包 .exe／.app
 ├─ engine/
 │  ├─ rules.py, triage.py, bsrs5.py      四級分流、誇飾遮蔽（LIN-01）、theoretical_basis
 │  ├─ dialogue_policy.py                 對話決策、IPTS／IMV、第三人稱、數位表型、回覆風格
@@ -39,7 +41,7 @@ anla-youth-v1.3-A.1/
 ├─ data/                        南投資源、30 組模擬案例、虛構重播情境與 P01–P10
 ├─ templates/, static/          頁面、四主題 CSS、PWA（manifest、sw.js、離線頁）
 ├─ tests/                       unittest 回歸測試、eval_95_gate.py、eval_mutation_check.py
-├─ mobile/, packaging/, .github/workflows/   Capacitor、Inno Setup、跨平台 CI
+├─ mobile/, packaging/, .github/workflows/   （已停止維護、不列入交付）Capacitor、Inno Setup、跨平台 CI
 ├─ scripts/                     start.ps1、run_local.ps1、run_tests.ps1
 └─ docs/                        交接、變更紀錄、文獻、平台說明、archive/
 ```

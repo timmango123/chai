@@ -241,7 +241,12 @@ html[data-theme] .sidebar-panel .side-tile-help { background: var(--t-accent-sof
 html[data-theme] .sidebar-panel #emergencyFold { color: var(--t-danger-text, #991b1b); }
 #emergencyFold .side-tile-icon { background: var(--t-danger-btn-bg, #fff); }
 #emergencyFold .side-tile-text small { color: var(--t-danger-text, #991b1b); opacity: .8; }
-#infoFold .side-tile-link { display: inline-block; margin-top: .6rem; font-size: .85rem; padding: .4rem .75rem; }
+/* 南投資源求助：獨立連結按鈕，外觀與其他側欄按鈕一致 */
+a.side-tile-resources { display: flex; align-items: center; gap: .7rem; min-height: 64px; padding: .7rem .9rem; box-sizing: border-box;
+  text-decoration: none; cursor: pointer; border-radius: var(--t-radius, 16px); border: 1px solid var(--t-border, #e2e8f0);
+  background: var(--t-surface, #fff); color: var(--t-text, #1e293b); box-shadow: var(--t-shadow); }
+a.side-tile-resources:hover { filter: brightness(.98); border-color: var(--t-accent, #6366f1); }
+a.side-tile-resources:focus-visible { outline: 2px solid var(--t-focus, #4f46e5); outline-offset: 2px; }
 #infoFold .panel-list { margin-top: .2rem; }
 
 /* 側欄底部小芽（純裝飾，主題色） */

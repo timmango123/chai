@@ -1,9 +1,10 @@
-# 部署：Render 網站與 GitHub Releases 下載
+# 部署：Render 網站
 
-GitHub Pages 只能放靜態網頁，跑不了這個專案的 Python 後端（AI 對話、資料庫、工作臺）。所以分成兩條路：
+> **2026-11-18 起交付形式只有網頁版**，不再提供安裝檔。第二節的 GitHub Releases 下載安裝版流程保留作為紀錄，已停止維護，請勿再推送 `v*` 標籤發佈安裝檔。
+
+GitHub Pages 只能放靜態網頁，跑不了這個專案的 Python 後端（AI 對話、資料庫、工作臺）。所以：
 
 - **線上網站**：程式碼在 GitHub，由 Render 代管執行，每次推送到 main 會自動更新。
-- **下載安裝版**：推送 `v*` 標籤時，GitHub Actions 自動建置安裝檔並附到 GitHub Releases 頁面。
 
 ## 一、Render 網站（第一次設定約 5 分鐘）
 
@@ -31,9 +32,9 @@ GitHub Pages 只能放靜態網頁，跑不了這個專案的 Python 後端（AI
 - 沒有永久磁碟：每次重新部署或重新啟動，SQLite 資料庫（對話暫存、個案、稽核紀錄）都會清空。展示與試用沒問題；正式給學生使用前，請改用付費方案並在 Render 加掛 Persistent Disk，再把 `DATABASE_PATH` 設到磁碟路徑（例如 `/var/data/anla_youth.db`）。
 - 主機在新加坡。正式使用前，請學校確認資料存放在境外主機是否符合規定。
 
-## 二、GitHub Releases 下載安裝版
+## 二、GitHub Releases 下載安裝版（已停止維護，不列入交付）
 
-推送一個 `v` 開頭的標籤，例如：
+以下為先前的做法，僅供查閱。推送一個 `v` 開頭的標籤，例如：
 
 ```bash
 git tag v2.5.12

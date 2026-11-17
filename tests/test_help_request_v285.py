@@ -27,7 +27,7 @@ class HelpRequestTests(unittest.TestCase):
             self.headers = {"X-CSRF-Token": sess["csrf_token"]}
 
     def onboard(self, email=""):
-        self.client.post("/api/onboarding", headers=self.headers, json={
+        return self.client.post("/api/onboarding", headers=self.headers, json={
             "privacy_acknowledged": True, "student_alias": "小晴", "township": "埔里鎮", "student_email": email})
 
     def chat(self, message):
@@ -63,6 +63,23 @@ class HelpRequestTests(unittest.TestCase):
         [case] = database.get_all_cases()
         self.assertEqual(case["status"], "student_requested_referral")
         self.assertEqual(case["summary"]["student_consent"]["kind"], "referral")
+
+    def test_a_student_can_ask_before_saying_anything(self):
+        # 2026-11-17: asking for a person before the first message crashed (empty draft) and the page
+        # showed "Unexpected token '<'" instead of a reply.
+        steps = self.onboard().json["next_steps"]
+        response = self.ask(steps, note="你好", preferred_name="匿名同學")
+        self.assertEqual(response.status_code, 200, response.get_data(as_text=True)[:200])
+        [case] = database.get_all_cases()
+        self.assertEqual((case["status"], case["risk_level"]), ("student_requested_help", "green"))
+
+    def test_an_unexpected_api_error_still_answers_in_json(self):
+        with patch("app.record_student_consent", side_effect=RuntimeError("boom")):
+            self.onboard()
+            steps = self.chat("最近考試好累")["next_steps"]
+            response = self.ask(steps)
+        self.assertEqual(response.status_code, 500)
+        self.assertIn("1925", response.json["error"])
 
     def test_checks(self):
         self.onboard()

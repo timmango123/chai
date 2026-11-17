@@ -180,7 +180,12 @@
       headers: {"Content-Type": "application/json", "X-CSRF-Token": window.ANLA_CSRF_TOKEN},
       body: JSON.stringify(body)
     });
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (_) {
+      throw new Error("暫時無法送出，還不確定輔導人員有沒有收到；請稍後再試，電話仍可直接使用。");
+    }
     if (data.show_urgent_help) showUrgentHelp();
     if (!response.ok) {
       if (data.next_steps) render(data.next_steps, true);

@@ -20,7 +20,7 @@ def plain(text):
 
 class PromptTests(Base):
     def test_prompt_teaches_listening_not_echoing(self):
-        for phrase in ("不當鸚鵡", "高層次同理", "多反映、少發問", "要不要聽聽一個小方法", "沒事啦", "肯定要具體"):
+        for phrase in ("不當鸚鵡", "高層次同理", "多反映、少發問", "願不願意一起想辦法", "沒事啦", "肯定要具體"):
             self.assertIn(phrase, SYSTEM_PROMPT)
 
     def test_echo_detection(self):

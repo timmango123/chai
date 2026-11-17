@@ -32,8 +32,10 @@ class KeepGoingTests(Base):
         self.assertIn("Gemini", result["model_used"])
 
     def test_prompt_asks_for_an_easy_question_instead_of_a_dead_end(self):
-        self.assertIn("不要只回一句感想就停", SYSTEM_PROMPT)
-        self.assertIn("給兩三個方向讓他挑", SYSTEM_PROMPT)
+        # 2026-11-17 user feedback: a question is allowed, not required; two tentative options, 「都不是」 allowed.
+        self.assertIn("只回應、不提問也可以", SYSTEM_PROMPT)
+        self.assertIn("給兩個暫定的方向讓他挑", SYSTEM_PROMPT)
+        self.assertNotIn("不要只回一句感想就停", SYSTEM_PROMPT)
 
 
 if __name__ == "__main__":

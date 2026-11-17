@@ -102,14 +102,18 @@ class ClarifiedHyperboleTests(Base):
 
 
 class DontKnowTests(Base):
-    def test_repeated_dont_know_gets_small_steps_and_a_person(self):
+    def test_repeated_dont_know_gets_two_tentative_options_not_advice(self):
+        # 2026-11-17 user feedback: 「不知道」 never switches the conversation to advice.
         state = {}
         for message in ("不知道", "不知道"):
             _, state = prepare_dialogue(message, perform_triage(message), state, use_model=False, hour=14)
             state = {**state, "history": state.get("history", [])}
         reply = local_reply("不知道", state)
-        self.assertIn("輔導老師", reply)
-        self.assertIn("走一走", reply)
+        self.assertEqual(state["current_goal"], "ease_unknown")
+        self.assertIn("give_advice", state["forbidden_actions"])
+        self.assertIn("都不是也可以", reply)
+        for advice in ("輔導老師", "走一走", "寫下"):
+            self.assertNotIn(advice, reply)
 
 
 class PageElementTests(RouteBase):
