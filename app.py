@@ -28,7 +28,7 @@ from engine.ai_agent import (
     generate_youth_response,
     prepare_dialogue,
 )
-from engine import model_router, providers, school_referral, tts, webfetch
+from engine import model_router, providers, school_referral, webfetch
 from engine.dialogue_ai import UNAVAILABLE_LABEL, _provider, model_status, reset_provider_cooldown
 from engine.dialogue_policy import POLICY_VERSION, REPLY_STYLES, build_state, remember_turn
 from engine.dialogue_reply import TOPIC_PATTERN
@@ -526,38 +526,6 @@ def reply_source(model_used):
     if model_used == UNAVAILABLE_LABEL:
         return "unavailable"  # an honest outage notice, not a conversation reply
     return "safety" if model_used in ("安全回覆", "安全確認") else "rules" if model_used == "對話規則回覆" else "local"
-
-
-@app.route("/api/tts/voices")
-def api_tts_voices():
-    """Cloud voices the student may pick for reading replies aloud; empty when no voice service is configured."""
-    return jsonify({"voices": tts.voices()})
-
-
-@app.route("/api/tts", methods=["POST"])
-def api_tts():
-    """Audio for one AI reply. Students only (after the privacy notice); per-conversation and site-wide limits
-    keep this from becoming a free speech service. On any failure the page falls back to the device voice."""
-    error = require_csrf()
-    if error:
-        return error
-    if student_identity() is None:
-        return jsonify({"error": "請先閱讀資料使用說明", "fallback": True}), 403
-    data = request.get_json(silent=True) or {}
-    text, voice = data.get("text"), data.get("voice")
-    if not isinstance(text, str) or not text.strip() or len(text) > tts.MAX_CHARS or not isinstance(voice, str):
-        return jsonify({"error": "朗讀內容需為 1 至 800 字", "fallback": True}), 400
-    rate = data.get("rate", 1.0)
-    if not isinstance(rate, (int, float)):
-        rate = 1.0
-    if not limiter.hit("tts:" + session["student_context_id"], 40, 600) or             not limiter.hit("tts:all", Config.TTS_CALLS_PER_MINUTE, 60):
-        return jsonify({"error": "朗讀太頻繁了，先改用裝置內建的聲音", "fallback": True}), 429
-    try:
-        audio, mime = tts.synthesize(voice, text, rate)
-    except tts.TtsError as exc:
-        logging.info("雲端朗讀失敗：%s", exc)
-        return jsonify({"error": "雲端語音暫時無法使用，先改用裝置內建的聲音", "reason": str(exc), "fallback": True}), 503
-    return Response(audio, mimetype=mime, headers={"Cache-Control": "no-store"})
 
 
 APP_VERSION = "2.11.2"  # shown on /health so you can tell which release a host (e.g. Render) is running

@@ -59,13 +59,6 @@ class Config:
     # 分析＋回覆兩次模型呼叫合計的上限秒數；超過就改用本機備援，不讓學生久等。
     LLM_TURN_BUDGET = float(os.environ.get("LLM_TURN_BUDGET", "30"))
     DIALOGUE_SEMANTIC_ANALYSIS = os.environ.get("DIALOGUE_SEMANTIC_ANALYSIS", "true").lower() == "true"
-    # 雲端朗讀語音（engine/tts.py）：有設定金鑰的服務才會出現在學生的聲音選單；只傳 AI 回覆文字，不傳學生訊息。
-    TTS_ENABLED = os.environ.get("TTS_ENABLED", "true").lower() == "true"
-    AZURE_SPEECH_KEY = os.environ.get("AZURE_SPEECH_KEY", "")
-    AZURE_SPEECH_REGION = os.environ.get("AZURE_SPEECH_REGION", "")  # 例如 eastasia、southeastasia
-    TTS_OPENAI_MODEL = os.environ.get("TTS_OPENAI_MODEL", "gpt-4o-mini-tts")
-    TTS_GEMINI_MODEL = os.environ.get("TTS_GEMINI_MODEL", "")  # 留白時自動找金鑰可用的語音模型
-    TTS_CALLS_PER_MINUTE = int(os.environ.get("TTS_CALLS_PER_MINUTE", "60"))  # 全站上限，控制費用
     # Public demo site (external spec 4): the server refuses to create formal cases (consent, help requests,
     # automatic safety alerts) and the student page says so. The workbench stays password-protected.
     PUBLIC_DEMO_MODE = os.environ.get("PUBLIC_DEMO_MODE", "false").lower() == "true"

@@ -606,16 +606,14 @@ function stopVoiceRecognition() {
   if (banner) banner.style.display = "none";
 }
 
-// 2. 語音朗讀 (Text-to-Speech)：可暫停／繼續／停止；聲音可選雲端自然語音（伺服器有設定時）或裝置內建語音。
-const SPEECH_LABELS = { idle: "🔊 朗讀這段話", loading: "⏳ 準備聲音…", playing: "⏸ 暫停", paused: "▶ 繼續" };
+// 2. 語音朗讀 (Text-to-Speech)：用瀏覽器內建的 Web Speech API（不經網路）；可暫停／繼續／停止，可選聲音與速度。
+const SPEECH_LABELS = { idle: "🔊 朗讀這段話", playing: "⏸ 暫停", paused: "▶ 繼續" };
 const VOICE_SAMPLE = "嗨，我是安啦會客室的陪伴夥伴。有什麼想說的，都可以慢慢說。";
 // Android 的瀏覽器內建語音不支援暫停，在那裡按暫停就直接停止。
 const DEVICE_PAUSE_WORKS = !/Android/i.test(navigator.userAgent);
-let speech = null; // 目前的朗讀：{ btn, kind: "device" | "audio" | null, audio, paused, cancelled }
-let cloudVoices = [];
-let voiceChoice = localStorage.getItem("anla_voice") || ""; // "cloud:<id>"、"device:<name>"；空白＝自動
+let speech = null; // 目前的朗讀：{ btn, paused, utterances }
+let voiceChoice = localStorage.getItem("anla_voice") || ""; // "device:<name>"；其他＝自動挑選
 let voiceRate = parseFloat(localStorage.getItem("anla_voice_rate") || "1") || 1;
-const audioCache = new Map(); // 同一段話再聽一次不必重新產生
 
 function toggleAutoSpeech() {
   isAutoSpeech = !isAutoSpeech;
@@ -674,17 +672,9 @@ function bestDeviceVoice() {
 }
 
 function selectedVoice() {
-  if (voiceChoice.startsWith("cloud:")) {
-    const id = voiceChoice.slice(6);
-    if (cloudVoices.some(v => v.id === id)) return { kind: "cloud", id };
-  }
-  if (voiceChoice.startsWith("device:")) {
-    const name = voiceChoice.slice(7);
-    return { kind: "device", voice: deviceVoices().find(v => v.name === name) || bestDeviceVoice() };
-  }
-  // 沒選過：伺服器有雲端語音就用第一個（最自然的台灣華語），否則用裝置內建最好的中文聲音。
-  if (cloudVoices.length) return { kind: "cloud", id: cloudVoices[0].id };
-  return { kind: "device", voice: bestDeviceVoice() };
+  // 沒選過（或選的聲音這台裝置沒有）：用裝置內建最好的中文聲音。
+  const name = voiceChoice.startsWith("device:") ? voiceChoice.slice(7) : "";
+  return (name && deviceVoices().find(v => v.name === name)) || bestDeviceVoice();
 }
 
 function setSpeechButton(btn, state) {
@@ -710,11 +700,7 @@ function setSpeechButton(btn, state) {
 
 function stopSpeech() {
   if (window.speechSynthesis) window.speechSynthesis.cancel();
-  if (speech) {
-    speech.cancelled = true;
-    if (speech.audio) speech.audio.pause();
-    setSpeechButton(speech.btn, "idle");
-  }
+  if (speech) setSpeechButton(speech.btn, "idle");
   speech = null;
 }
 
@@ -734,30 +720,21 @@ function speakMessage(elementOrText) {
   stopSpeech();
   const text = speechText(elementOrText);
   if (!text) return;
-  const current = speech = { btn, kind: null, audio: null, paused: false, cancelled: false };
-  const choice = selectedVoice();
-  if (choice.kind === "cloud") playCloud(current, choice.id, text);
-  else playDevice(current, choice.voice, text);
+  speech = { btn, paused: false, utterances: [] };
+  playDevice(speech, selectedVoice(), text);
 }
 
 function togglePause() {
   const s = speech;
-  if (!s || !s.kind) return; // 聲音還在準備中
-  if (s.kind === "device" && !DEVICE_PAUSE_WORKS) {
+  if (!s) return;
+  if (!DEVICE_PAUSE_WORKS) {
     stopSpeech();
     return;
   }
-  if (s.paused) {
-    if (s.kind === "audio") s.audio.play().catch(() => {});
-    else window.speechSynthesis.resume();
-    s.paused = false;
-    setSpeechButton(s.btn, "playing");
-  } else {
-    if (s.kind === "audio") s.audio.pause();
-    else window.speechSynthesis.pause();
-    s.paused = true;
-    setSpeechButton(s.btn, "paused");
-  }
+  if (s.paused) window.speechSynthesis.resume();
+  else window.speechSynthesis.pause();
+  s.paused = !s.paused;
+  setSpeechButton(s.btn, s.paused ? "paused" : "playing");
 }
 
 function playDevice(s, voice, text) {
@@ -766,103 +743,57 @@ function playDevice(s, voice, text) {
     alert("這個瀏覽器不支援語音朗讀。");
     return;
   }
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = voice ? voice.lang : "zh-TW";
-  if (voice) utterance.voice = voice;
-  utterance.rate = 0.95 * voiceRate; // 舒緩溫柔的陪伴語速
-  utterance.pitch = 1.05;
-  utterance.onend = () => finishSpeech(s);
-  utterance.onerror = () => finishSpeech(s);
-  s.kind = "device";
-  setSpeechButton(s.btn, "playing");
-  window.speechSynthesis.speak(utterance);
-}
-
-async function playCloud(s, voiceId, text) {
-  setSpeechButton(s.btn, "loading");
-  const key = `${voiceId}|${voiceRate}|${text}`;
-  let url = audioCache.get(key);
-  if (!url) {
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-CSRF-Token": window.ANLA_CSRF_TOKEN },
-        body: JSON.stringify({ text: text.slice(0, 800), voice: voiceId, rate: voiceRate }),
-      });
-      if (!res.ok) throw new Error(String(res.status));
-      url = URL.createObjectURL(await res.blob());
-      audioCache.set(key, url);
-      if (audioCache.size > 20) {
-        const [oldKey, oldUrl] = audioCache.entries().next().value;
-        URL.revokeObjectURL(oldUrl);
-        audioCache.delete(oldKey);
-      }
-    } catch (e) {
-      if (s.cancelled) return;
-      showVoiceNotice("雲端語音暫時無法使用，這次改用裝置內建的聲音。");
-      playDevice(s, bestDeviceVoice(), text);
-      return;
-    }
+  // Chrome 的線上語音念超過約 15 秒會自己中斷，所以依標點切成短句排隊念。
+  const chunks = speechChunks(text);
+  if (!chunks.length) {
+    finishSpeech(s);
+    return;
   }
-  if (s.cancelled) return;
-  const audio = new Audio(url);
-  s.audio = audio;
-  s.kind = "audio";
-  audio.onended = () => finishSpeech(s);
-  setSpeechButton(s.btn, "playing");
-  audio.play().catch(() => {
-    // 瀏覽器擋下自動播放（例如自動朗讀時頁面還沒被點過）：停在「繼續」，讓學生自己按。
-    if (s.cancelled) return;
-    s.paused = true;
-    setSpeechButton(s.btn, "paused");
+  s.utterances = chunks.map((chunk, i) => { // 留著參照，避免瀏覽器提早回收而收不到 onend
+    const utterance = new SpeechSynthesisUtterance(chunk);
+    utterance.lang = voice ? voice.lang : "zh-TW";
+    if (voice) utterance.voice = voice;
+    utterance.rate = 0.95 * voiceRate; // 舒緩溫柔的陪伴語速
+    utterance.pitch = 1.05;
+    if (i === chunks.length - 1) utterance.onend = () => finishSpeech(s);
+    utterance.onerror = () => { if (speech === s) stopSpeech(); };
+    return utterance;
   });
+  setSpeechButton(s.btn, "playing");
+  s.utterances.forEach(u => window.speechSynthesis.speak(u));
 }
 
-function showVoiceNotice(text) {
-  const notice = document.getElementById("voiceNotice");
-  if (notice) notice.textContent = text;
+function speechChunks(text) {
+  const parts = text.match(/[^。！？!?；;，,、：:\n]+[。！？!?；;，,、：:\n]*/g) || [text];
+  const chunks = [];
+  let current = "";
+  parts.forEach(part => {
+    if (current && (current + part).length > 50) {
+      chunks.push(current);
+      current = "";
+    }
+    current += part;
+  });
+  chunks.push(current);
+  return chunks.filter(chunk => chunk.trim());
 }
 
 // ---------- 朗讀聲音選單 ----------
-async function loadCloudVoices() {
-  try {
-    const res = await fetch("/api/tts/voices", { cache: "no-store" });
-    cloudVoices = res.ok ? ((await res.json()).voices || []) : [];
-  } catch (e) {
-    cloudVoices = [];
-  }
-  renderVoiceOptions();
-}
-
 function renderVoiceOptions() {
   const select = document.getElementById("voiceSelect");
   if (!select) return;
   select.innerHTML = "";
-  if (cloudVoices.length) {
-    const group = document.createElement("optgroup");
-    group.label = "雲端自然語音";
-    cloudVoices.forEach(v => group.appendChild(new Option(`${v.label}（${v.service}）`, "cloud:" + v.id)));
-    select.appendChild(group);
-  }
-  const device = document.createElement("optgroup");
-  device.label = "這台裝置內建的聲音（不經網路）";
-  device.appendChild(new Option("自動挑選中文聲音", "device:"));
-  deviceVoices().forEach(v => device.appendChild(new Option(v.name + (isNaturalVoice(v) ? "（自然）" : ""), "device:" + v.name)));
-  select.appendChild(device);
-  const choice = selectedVoice();
-  select.value = choice.kind === "cloud" ? "cloud:" + choice.id
-    : (voiceChoice.startsWith("device:") && [...select.options].some(o => o.value === voiceChoice) ? voiceChoice : "device:");
+  select.appendChild(new Option("自動挑選中文聲音", "device:"));
+  deviceVoices().forEach(v => select.appendChild(new Option(v.name + (isNaturalVoice(v) ? "（自然）" : ""), "device:" + v.name)));
+  select.value = [...select.options].some(o => o.value === voiceChoice) ? voiceChoice : "device:";
   const rate = document.getElementById("voiceRate");
   if (rate) rate.value = String(voiceRate);
-  const note = document.getElementById("voiceCloudNote");
-  if (note) note.hidden = !select.value.startsWith("cloud:");
 }
 
 function openVoiceDialog() {
   const dialog = document.getElementById("voiceDialog");
   if (!dialog) return;
   renderVoiceOptions();
-  showVoiceNotice("");
   if (typeof dialog.showModal === "function") {
     if (!dialog.open) dialog.showModal();
   } else {
@@ -879,7 +810,7 @@ function closeVoiceDialog() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  loadCloudVoices();
+  renderVoiceOptions();
   if (window.speechSynthesis) window.speechSynthesis.addEventListener("voiceschanged", renderVoiceOptions);
   document.getElementById("voiceSettingsBtn")?.addEventListener("click", openVoiceDialog);
   document.getElementById("voiceClose")?.addEventListener("click", closeVoiceDialog);

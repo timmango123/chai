@@ -434,7 +434,7 @@
     </div>
   </dialog>
 
-  <!-- 朗讀聲音：雲端自然語音（伺服器有設定金鑰時）或裝置內建語音；選擇只存在這台裝置。 -->
+  <!-- 朗讀聲音：瀏覽器內建語音（Web Speech API，不經網路）；選擇只存在這台裝置。 -->
   <dialog id="voiceDialog" class="install-dialog voice-dialog" aria-labelledby="voiceTitle">
     <div class="install-dialog-body">
       <div class="install-dialog-head">
@@ -452,9 +452,7 @@
         </select>
       </label>
       <button type="button" id="voicePreview" class="btn-primary-action">▶ 試聽這個聲音</button>
-      <p id="voiceNotice" class="voice-notice" role="status"></p>
-      <p id="voiceCloudNote" class="install-privacy" hidden>雲端語音會把 AI 這段回覆的文字傳給語音服務來產生聲音；你自己打的訊息不會傳過去。</p>
-      <p class="install-privacy">朗讀時再按一次按鈕可以暫停，再按就繼續。裝置內建的聲音不經網路；用 Microsoft Edge 開啟會有比較自然的「Natural」聲音。</p>
+      <p class="install-privacy">朗讀時再按一次按鈕可以暫停，再按就繼續。朗讀用的是這台裝置內建的聲音，不經網路；用 Microsoft Edge 開啟會有比較自然的「Natural」聲音。</p>
     </div>
   </dialog>
 
