@@ -8,7 +8,7 @@
 - **長回覆切成短句排隊念**（`static/js/app.js` 的 `speechChunks`）：Chrome 的線上語音念超過約 15 秒會自己中斷，所以依標點切成 50 字以內的短句。
 - **移除雲端語音**：刪除 `engine/tts.py`、`/api/tts`、`/api/tts/voices`、前端的雲端播放路徑，以及 `TTS_ENABLED`、`AZURE_SPEECH_KEY`、`AZURE_SPEECH_REGION`、`TTS_OPENAI_MODEL`、`TTS_GEMINI_MODEL`、`TTS_CALLS_PER_MINUTE` 設定（部署環境若還留著這些變數，不會有作用，可以刪掉）。
 - **測試**：刪除 `tests/test_tts_v26.py`（12 項），新增 `tests/test_voice_web_speech.py`（4 項）；共 589 項全部通過。已在內建瀏覽器實測朗讀、暫停、繼續、停止。
-- **桌面版**（`dist/AnlaYouth/`）已於 2026-11-17 重新打包，打包版 `--check --require-tray` 通過；安裝檔（Inno Setup）未重做。
+- **桌面版**（`dist/AnlaYouth/`）已於 2026-11-17 重新打包，打包版 `--check --require-tray` 通過；安裝檔 `dist/AnlaYouth_Setup.exe` 也已用 Inno Setup 重做。
 
 ## 2026-11-17：試用回饋修正（畫面五項＋自殺危險辨識）
 
