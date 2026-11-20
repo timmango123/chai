@@ -4,8 +4,9 @@ Whatever the risk level, a student who mentions sexual harassment / assault, int
 teasing or bullying is told the school counseling office (輔導室) can help, and gets a referral note they can
 edit and hand in. If they choose to name their school, any of the 4,000-odd schools in the Ministry of Education
 directory (data/schools_moe.json: main phone, address, website) can be found; when the team has also verified
-that school's counseling-office email, the note can be opened as an email draft. Nothing is ever sent by the
-system: the student's own mail app opens and the student decides whether to send.
+that school's counseling-office email, the note can be opened as an email draft in the student's own mail app.
+By default nothing is sent by the system. Only when the host sets up SMTP (engine/mailer.py) can a student ask
+the system to send the note, and only to the verified address (or the labelled demo mailbox).
 
 Verified counseling contacts live in data/school_counseling.json. Every entry needs an https source page and a
 verification date; entries without them are ignored, so no address is ever guessed.
@@ -15,6 +16,9 @@ import os
 import re
 from urllib.parse import quote
 
+from engine import mailer
+
+MAIL_SUBJECT = "想跟輔導室約時間談談"
 DATA = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "school_counseling.json")
 MOE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "schools_moe.json")
 MOE_PAGE = "https://depart.moe.edu.tw/ED4500/News.aspx?n=63F5AB3D02A8BBAC&sms=1FF9979D10DBF9F3"
@@ -237,11 +241,17 @@ def contact(school, note):
            "phone_href": "tel:" + re.sub(r"[^0-9]", "", school["phone"]) if school["phone"] else "",
            "website": school["website"] if re.match(r"https?://", school.get("website") or "") else "",
            "source": "教育部統計處各級學校名錄", "source_url": MOE_PAGE,
-           "office": "輔導室", "email": "", "mailto": ""}
+           "office": "輔導室", "email": "", "mailto": "", "demo": False}
+    demo = "" if verified else mailer.demo_recipient()
     if verified:
         out.update(office=verified.get("office", "輔導室"), email=verified["email"],
                    email_source_url=verified["source_url"], office_phone=verified.get("phone", ""),
                    mailto=mail_draft(verified, note))
+    elif demo:
+        # A stand-in mailbox for demonstrations (DEMO_COUNSELING_EMAIL). The page labels it as not the school's.
+        out.update(email=demo, demo=True, mailto=mail_draft({"email": demo}, note))
+    # The system sends only when the host set up SMTP, and only to the address above (never one from the page).
+    out["can_send"] = bool(out["email"]) and mailer.configured()
     return out
 
 
@@ -264,8 +274,17 @@ def referral_note(topic_keys, school_name=""):
 
 def mail_draft(entry, note):
     """mailto: link that opens the student's own mail app with the note filled in; nothing is sent for them."""
-    subject = "想跟輔導室約時間談談"
-    return f"mailto:{entry['email']}?subject={quote(subject)}&body={quote(note)}"
+    return f"mailto:{entry['email']}?subject={quote(MAIL_SUBJECT)}&body={quote(note)}"
+
+
+def system_mail(info, note):
+    """(subject, body) of the mail the system sends when the student asks it to. The counseling office is told
+    who really sent it and that the student's identity was not checked."""
+    lines = ["（這封信由「少年仔、安啦會客室」網站依學生本人的要求代為寄出。網站沒有驗證學生的身分；"
+             "回信請用學生在下面留下的聯絡方式。）"]
+    if info.get("demo"):
+        lines.append("（展示用：這個收件信箱不是真實的學校輔導室。）")
+    return ("【展示】" if info.get("demo") else "") + MAIL_SUBJECT, "\n".join(lines) + "\n\n" + note
 
 
 def payload(topic_keys, school_name="", code=None, county=None):

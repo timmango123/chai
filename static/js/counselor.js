@@ -1,6 +1,9 @@
 // 授權人員工作臺：所有資料顯示前先跳脫，處置紀錄由真人確認。
 let allCasesCache = [];
 let currentActiveCase = null;
+// 展示後台（/showcase）：只讀虛構案例的唯讀端點，不登入、不儲存。
+const SHOWCASE = !!window.ANLA_SHOWCASE;
+const API = SHOWCASE ? "/api/showcase" : "/api";
 
 const $ = id => document.getElementById(id);
 function escapeHtml(value) {
@@ -109,7 +112,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
 async function loadStats() {
   try {
-    const res = await fetch("/api/stats", {cache: "no-store"});
+    const res = await fetch(`${API}/stats`, {cache: "no-store"});
     if (!res.ok) throw new Error("無法載入統計");
     const data = await res.json();
     for (const [key, id] of [["red", "statRed"], ["orange", "statOrange"], ["yellow", "statYellow"], ["green", "statGreen"]]) {
@@ -122,7 +125,7 @@ async function loadCases() {
     risk: $("filterRisk").value, township: $("filterTownship").value, status: $("filterStatus").value
   });
   try {
-    const res = await fetch(`/api/cases?${query}`, {cache: "no-store"});
+    const res = await fetch(`${API}/cases?${query}`, {cache: "no-store"});
     if (!res.ok) throw new Error("無法載入個案，請重新登入");
     const data = await res.json();
     allCasesCache = data.cases || [];
@@ -160,7 +163,7 @@ function renderCasesTable(cases) {
 
 async function openSummaryModal(caseId) {
   try {
-    const res = await fetch(`/api/cases/${encodeURIComponent(caseId)}`, {cache: "no-store"});
+    const res = await fetch(`${API}/cases/${encodeURIComponent(caseId)}`, {cache: "no-store"});
     if (!res.ok) throw new Error("資料讀取失敗");
     currentActiveCase = (await res.json()).case;
     renderOnePageSummary(currentActiveCase);
@@ -174,6 +177,7 @@ function closeSummaryModal() {
 }
 async function printCase() {
   if (!currentActiveCase) return;
+  if (SHOWCASE) { window.print(); return; }
   // Printing student records is logged like viewing them; print even if the log call fails, the view is already logged.
   try {
     await fetch(`/api/cases/${encodeURIComponent(currentActiveCase.case_id)}/printed`, {
@@ -319,6 +323,9 @@ function renderOnePageSummary(c) {
       </div>
     </div>
     <hr>
+    ${SHOWCASE ? `<p class="showcase-banner">🎬 展示模式：這是虛構案例，處理狀態與紀錄不能儲存。正式工作臺在這裡可以改狀態、新增只能追加的處理紀錄，並寫進操作紀錄。</p>
+    <button type="button" onclick="printCase()">列印摘要</button>
+    <button type="button" onclick="closeSummaryModal()">關閉</button>` : `
     <label>處理狀態：<select id="updateStatusSelect">
       ${Object.entries(staffStatuses).map(([value, label]) => `<option value="${value}" ${c.status === value ? "selected" : ""}>${label}</option>`).join("")}
     </select></label>
@@ -329,10 +336,11 @@ function renderOnePageSummary(c) {
     <p><label><input type="checkbox" id="contactConfirmed"> 若選「已聯絡／已轉介」，我確認已在本網站以外實際完成，並在備註記錄方式與時間。</label></p>
     <button type="button" class="btn-primary-action" onclick="saveCounselorReview()">儲存真人覆核</button>
     <button type="button" onclick="printCase()">列印摘要</button>
-    <button type="button" onclick="closeSummaryModal()">關閉</button>`;
+    <button type="button" onclick="closeSummaryModal()">關閉</button>`}`;
 }
 function quickApplyDecision(proposal) {
   // 點選只是草擬；絕不將處置標記為已聯絡或已轉介。
+  if (SHOWCASE) { alert(`展示模式：正式工作臺會把「${proposal}」填進處置摘要草稿，由真人確認後才儲存。`); return; }
   $("decisionInput").value = proposal;
   $("updateStatusSelect").value = "reviewing";
   $("contactConfirmed").checked = false;

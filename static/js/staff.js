@@ -20,7 +20,7 @@
     const host = $("statsPanelBody");
     if (!host) return;
     try {
-      const data = await call("/api/stats/breakdown");
+      const data = await call(window.ANLA_SHOWCASE ? "/api/showcase/stats/breakdown" : "/api/stats/breakdown");
       host.innerHTML = data.groups.map(group => `<div class="stats-group"><b>${E(group.title)}</b>${
         group.rows.length ? group.rows.map(([label, count]) => `<div class="stats-row"><span>${E(label)}</span><span>${E(count)}</span></div>`).join("")
           : '<span class="explain-meta">尚無資料</span>'}</div>`).join("");

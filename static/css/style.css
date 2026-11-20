@@ -240,6 +240,10 @@ body {
 .school-referral-card h3 { margin: 0 0 .35rem; font-size: 1rem; }
 .school-referral-card ul { margin: .35rem 0; padding-left: 1.2rem; }
 .school-referral-card a { color: #1d4ed8; }
+/* The card stays light in every theme, so its links stay dark blue: the dark theme's light link colour
+   (html[data-theme] a) was nearly invisible on it (2026-11-20). Underlined and bold so they read as links. */
+html[data-theme] .school-referral-card a:not(.choice-chip) { color: #1d4ed8; font-weight: 600;
+  text-decoration: underline; text-underline-offset: 2px; }
 .school-referral-card textarea, .school-referral-card input { width: 100%; box-sizing: border-box; font: inherit; margin: .25rem 0; }
 .school-referral-card .choice-chip { display: inline-block; margin: .25rem .4rem .25rem 0; text-decoration: none; }
 .school-referral-hint { font-size: .82rem; opacity: .85; }
@@ -1040,3 +1044,13 @@ body.has-urgent-help { padding-top: var(--urgent-help-height, 125px); }
   .resources-page .navbar { flex-wrap: wrap; gap: .5rem 1rem; }
   .resources-page .navbar .nav-links { flex-wrap: wrap; gap: .35rem; }
 }
+
+/* 學生端／展示後台切換（2026-11-20）：兩段式開關，目前所在的那一段反白。展示後台只有虛構案例。 */
+.view-switch { display: inline-flex; border: 1px solid #c7d2fe; border-radius: 999px; padding: 2px; background: #eef2ff; }
+.view-switch a { text-decoration: none; font-size: .82rem; font-weight: 600; padding: .28rem .7rem; border-radius: 999px;
+  color: #3730a3 !important; white-space: nowrap; }
+.view-switch a.active { background: #4f46e5; color: #fff !important; }
+.view-switch a:not(.active):hover { background: #e0e7ff; }
+.view-switch a:focus-visible { outline: 2px solid #4f46e5; outline-offset: 2px; }
+.showcase-banner { background: #fef9c3; color: #713f12; border: 1px solid #fde68a; border-radius: 10px;
+  padding: .6rem .9rem; font-size: .88rem; margin: 0 0 1rem; }

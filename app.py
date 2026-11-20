@@ -28,7 +28,7 @@ from engine.ai_agent import (
     generate_youth_response,
     prepare_dialogue,
 )
-from engine import model_router, providers, school_referral, webfetch
+from engine import mailer, model_router, providers, school_referral, webfetch
 from engine.dialogue_ai import UNAVAILABLE_LABEL, _provider, model_status, reset_provider_cooldown
 from engine.dialogue_policy import POLICY_VERSION, REPLY_STYLES, build_state, remember_turn
 from engine.dialogue_reply import TOPIC_PATTERN
@@ -439,7 +439,8 @@ def logout():
 @app.route("/counselor")
 @staff_only
 def counselor():
-    return render_template("counselor.html", csrf_token=csrf_token(), staff_role=session.get("staff_role", "admin"),
+    return render_template("counselor.html", csrf_token=csrf_token(), showcase=False,
+                           staff_role=session.get("staff_role", "admin"),
                            staff_name=session.get("staff_name", ""), staff_user=session.get("staff_user", BUILTIN_ADMIN),
                            role_label=STAFF_ROLES.get(session.get("staff_role", "admin"), ""))
 
@@ -844,6 +845,60 @@ def api_school_referral():
         return jsonify({"error": "學校名稱需為 100 字以內的文字"}), 400
     return jsonify({"school_referral": school_referral.payload(
         session.get("school_referral_topics", []), school.strip(), code=code, county=STUDENT_COUNTY)})
+
+
+REFERRAL_MAIL_PER_STUDENT = (2, 3600)   # one conversation: 2 mails an hour
+REFERRAL_MAIL_SITE_WIDE = (30, 86400)   # the whole site: 30 mails a day
+REFERRAL_NOTE_MAX = 2000
+
+
+@app.route("/api/school-referral/send", methods=["POST"])
+def api_school_referral_send():
+    """The student asks the system to mail the referral note. Only when the host set up SMTP (engine/mailer.py),
+    only after the counseling card was shown, and only to the address the server holds for that school (team-
+    verified, or the labelled demo mailbox): the page never supplies a recipient. The note is not stored."""
+    error = require_csrf()
+    if error:
+        return error
+    context = current_student_context()
+    if context is None:
+        return jsonify({"error": "請先閱讀資料使用說明"}), 403
+    if not session.get("school_referral_topics"):
+        return jsonify({"error": "請先打開學校輔導室的卡片"}), 403
+    if not mailer.configured():
+        return jsonify({"error": "這個網站沒有開啟代寄功能；可以用自己的信箱寄，或把轉介單直接拿給輔導老師。"}), 503
+    data = request.get_json(silent=True)
+    data = data if isinstance(data, dict) else {}
+    code, note = data.get("code"), data.get("note")
+    if not isinstance(code, str) or not re.fullmatch(r"[0-9A-Za-z]{4,8}", code):
+        return jsonify({"error": "學校代碼不正確"}), 400
+    if not isinstance(note, str) or not note.strip() or len(note) > REFERRAL_NOTE_MAX:
+        return jsonify({"error": f"轉介單需為 1–{REFERRAL_NOTE_MAX} 字的文字"}), 400
+    if data.get("confirmed") is not True:
+        return jsonify({"error": "請先確認要寄出"}), 400
+    school, _ = school_referral.pick_school(code=code)
+    if school is None:
+        return jsonify({"error": "找不到這間學校"}), 404
+    info = school_referral.contact(school, note.strip())
+    if not info["email"]:
+        return jsonify({"error": "這間學校的輔導室信箱還沒有核對過，沒辦法代寄。"}), 400
+    student_key = "referral-mail:" + session["student_context_id"]
+    if not limiter.hit(student_key, *REFERRAL_MAIL_PER_STUDENT):
+        return jsonify({"error": "剛剛已經寄過了，請晚一點再試；也可以把轉介單直接拿給輔導老師。"}), 429
+    if not limiter.hit("referral-mail:all", *REFERRAL_MAIL_SITE_WIDE):
+        limiter.forget_last(student_key)
+        return jsonify({"error": "今天代寄的數量已達上限；可以用自己的信箱寄，或把轉介單直接拿給輔導老師。"}), 429
+    subject, body = school_referral.system_mail(info, note.strip())
+    try:
+        mailer.send(info["email"], subject, body, reply_to=context["profile"].get("student_email", ""))
+    except Exception as exc:  # the mail server refused or could not be reached: tell the student it did not go out
+        limiter.forget_last(student_key)
+        app.logger.warning("referral mail failed: %s", type(exc).__name__)
+        return jsonify({"error": "信沒有寄出去。可以再試一次、用自己的信箱寄，或把轉介單直接拿給輔導老師。"}), 502
+    # The audit log keeps the school and the kind of mailbox, never the note or an address.
+    log_audit("student", "school_referral_mail_sent", "",
+              f"{school['name']}（{'展示用信箱' if info['demo'] else '核對過的輔導室信箱'}）")
+    return jsonify({"sent": True, "demo": info["demo"], "school": school["name"]})
 
 
 def safety_alert(level):
@@ -1320,6 +1375,94 @@ def api_demo_evaluate(case_id):
         "pending_disambiguation": triage.get("pending_disambiguation", False),
         "summary": generate_counselor_one_page_summary(item, triage),
     })
+
+
+# ---------- 展示後台（免密碼、唯讀）：只用 data/mock_cases.json 的虛構案例，絕不讀取真實個案 ----------
+SHOWCASE_STATUSES = ["auto_safety_alert", "student_requested_referral", "reviewing", "student_shared_summary",
+                     "pending", "contacted", "student_requested_help", "completed"]
+_showcase_cache = []
+
+
+def showcase_cases():
+    """Case-shaped records built from the fictional mock cases, so the workbench can be shown without a password.
+    Built once per process; nothing is written to the database or the audit log."""
+    if _showcase_cache:
+        return _showcase_cache
+    now = datetime.now()
+    for i, item in enumerate(MOCK_CASES):
+        triage = perform_triage(text=item.get("dialogue_snippet", ""), bsrs5_answers=item.get("bsrs5"),
+                                duration=item.get("duration", ""), life_impact=item.get("life_impact", ""),
+                                support_system=item.get("support_system", ""))
+        summary = generate_counselor_one_page_summary(item, triage)
+        status = SHOWCASE_STATUSES[i % len(SHOWCASE_STATUSES)]
+        stamp = datetime.fromtimestamp(now.timestamp() - i * 2400).strftime("%Y-%m-%d %H:%M:%S")
+        if status == "auto_safety_alert":
+            summary["auto_alert"] = {"level": triage["level"], "at": stamp, "fields": ["燈號", "引發警訊的原話", "鄉鎮"]}
+        elif status in ("student_requested_referral", "student_shared_summary", "student_requested_help"):
+            kind = {"student_requested_referral": "referral", "student_shared_summary": "summary"}.get(status, "request")
+            summary["student_consent"] = {"kind": kind, "consented_at": stamp}
+        _showcase_cache.append({
+            "case_id": "DEMO-" + item["case_id"].removeprefix("CASE-"), "student_alias": item.get("persona", "虛構學生"),
+            "student_email": "", "township": item.get("township", ""), "risk_level": triage["level"],
+            "status": status, "category": item.get("category", ""), "duration": item.get("duration", ""),
+            "life_impact": item.get("life_impact", ""), "support_system": item.get("support_system", ""),
+            "dialogue_snippet": item.get("dialogue_snippet", ""), "bsrs5": item.get("bsrs5") or {},
+            "triage": triage, "summary": summary,
+            "counselor_notes": "（展示用虛構紀錄）" if status in ("contacted", "completed") else "",
+            "decision_action": "", "created_at": stamp, "updated_at": stamp})
+    return _showcase_cache
+
+
+def showcase_filtered(risk=None, township=None, status=None):
+    pending = {"pending", "student_requested_referral", "student_shared_summary", "auto_safety_alert",
+               "student_requested_help"}
+    rows = [c for c in showcase_cases()
+            if (not risk or risk == "all" or c["risk_level"] == risk)
+            and (not township or township == "all" or c["township"] == township)
+            and (not status or status == "all" or (c["status"] in pending if status == "pending" else c["status"] == status))]
+    return sorted(rows, key=lambda c: (c["status"] in ("completed", "referred"), -RISK_LEVEL_WEIGHTS[c["risk_level"]]))
+
+
+@app.route("/showcase")
+def showcase():
+    return render_template("counselor.html", csrf_token="", showcase=True, staff_role="showcase",
+                           staff_name="評審／訪客", staff_user="showcase", role_label="展示模式")
+
+
+@app.route("/api/showcase/cases")
+def api_showcase_cases():
+    cases = showcase_filtered(request.args.get("risk"), request.args.get("township"), request.args.get("status"))
+    return jsonify({"cases": cases, "count": len(cases), "showcase": True})
+
+
+@app.route("/api/showcase/cases/<case_id>")
+def api_showcase_case(case_id):
+    case = next((c for c in showcase_cases() if c["case_id"] == case_id), None)
+    if case is None:
+        return jsonify({"error": "找不到展示案例"}), 404
+    return jsonify({"case": case, "showcase": True})
+
+
+@app.route("/api/showcase/stats")
+def api_showcase_stats():
+    cases = showcase_cases()
+    open_cases = [c for c in cases if c["status"] not in ("referred", "completed")]
+    return jsonify({"total": len(cases), "showcase": True,
+                    **{level: sum(c["risk_level"] == level for c in open_cases) for level in RISK_LEVEL_WEIGHTS}})
+
+
+@app.route("/api/showcase/stats/breakdown")
+def api_showcase_breakdown():
+    from collections import Counter
+    cases = showcase_cases()
+    levels = {"red": "紅色", "orange": "橙色", "yellow": "黃色", "green": "綠色"}
+    counters = {"燈號": Counter(levels[c["risk_level"]] for c in cases),
+                "處理狀態": Counter(STATUS_LABELS.get(c["status"], c["status"]) for c in cases),
+                "鄉鎮": Counter(c["township"] for c in cases)}
+    show = lambda n: str(n) if n >= SMALL_CELL else f"少於 {SMALL_CELL}"
+    return jsonify({"total": show(len(cases)), "showcase": True, "groups": [
+        {"title": title, "rows": [[label, show(n)] for label, n in counter.most_common()]}
+        for title, counter in counters.items()]})
 
 
 @app.route("/api/explain/scenarios")

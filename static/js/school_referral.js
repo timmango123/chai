@@ -1,5 +1,6 @@
 // 性平／霸凌：不管燈號，都提醒可以找學校輔導室，並提供可修改的轉介單。
-// 學生願意說學校時，從教育部學校名錄找出學校總機與網站；團隊核對過輔導室信箱的學校，可以用自己的信箱開好草稿（系統不會代寄）。
+// 學生願意說學校時，從教育部學校名錄找出學校總機與網站；團隊核對過輔導室信箱的學校，可以用自己的信箱開好草稿。
+// 預設系統不代寄；主機設定了 SMTP（engine/mailer.py）時才多一顆「請系統幫我寄出」，收件人由伺服器決定。
 window.AnlaSchoolReferral = (() => {
   function el(tag, text, className) {
     const node = document.createElement(tag);
@@ -49,14 +50,50 @@ window.AnlaSchoolReferral = (() => {
       const s = data.school;
       box.appendChild(el("p", `${s.name}（${s.county}）`, "school-referral-name"));
       if (s.email) {
-        box.appendChild(el("p", `${s.office}信箱：${s.email}${s.office_phone ? `，電話 ${s.office_phone}` : ""}`));
+        box.appendChild(el("p", s.demo
+          ? `⚠️ 展示用信箱（不是${s.name}的輔導室，信不會送到學校）：${s.email}`
+          : `${s.office}信箱：${s.email}${s.office_phone ? `，電話 ${s.office_phone}` : ""}`));
         const send = el("a", "✉️ 用我自己的信箱開好草稿", "choice-chip");
         send.href = mailto(s.email, area.value);
         area.addEventListener("input", () => { send.href = mailto(s.email, area.value); });
         box.appendChild(send);
-        const hint = el("p", "按下去只會打開你的郵件程式，信要不要寄出由你決定；系統不會幫你寄。", "school-referral-hint");
+        const hint = el("p", "「用我自己的信箱」只會打開你的郵件程式，信要不要寄出由你決定" +
+          (s.can_send ? "。" : "；系統不會幫你寄。"), "school-referral-hint");
         if (/^https:\/\//.test(s.email_source_url || "")) hint.append(" ", link("信箱來源（學校官網）", s.email_source_url));
-        box.appendChild(hint);
+        if (s.can_send) {
+          const post = el("button", "📨 請系統幫我寄出", "choice-chip");
+          post.type = "button";
+          const status = el("p", "", "school-referral-hint");
+          status.setAttribute("role", "status");
+          post.addEventListener("click", async () => {
+            const note = area.value.trim();
+            if (!note) { area.focus(); return; }
+            const to = s.demo ? "展示用信箱" : `${s.name}${s.office}`;
+            if (!confirm(`系統會把上面這張轉介單寄到${to}（${s.email}）。\n\n` +
+              "信是用系統的信箱寄的，對方不會知道你是誰，請確認轉介單裡有寫怎麼聯絡你。\n寄出後不能收回。確定要寄出嗎？")) return;
+            post.disabled = true;
+            status.textContent = "寄送中…";
+            try {
+              const res = await fetch("/api/school-referral/send", {
+                method: "POST",
+                headers: {"Content-Type": "application/json", "X-CSRF-Token": window.ANLA_CSRF_TOKEN},
+                body: JSON.stringify({code: s.code, note, confirmed: true}),
+              });
+              const result = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(result.error || "信沒有寄出去，請稍後再試。");
+              post.textContent = "已寄出";
+              status.textContent = `已經寄到${to}。對方什麼時候看信、會不會回覆，系統沒辦法知道；急的話請直接打電話或當面找老師。`;
+            } catch (error) {
+              post.disabled = false;
+              status.textContent = error.message;
+            }
+          });
+          box.appendChild(post);
+          hint.append(" 「請系統幫我寄出」會由系統的信箱代寄，按下後還會再跟你確認一次。");
+          box.append(hint, status);
+        } else {
+          box.appendChild(hint);
+        }
       } else {
         box.appendChild(el("p", "這間學校的輔導室信箱我們還沒有核對過。可以打學校總機請他們轉輔導室，或把轉介單印出來、抄下來直接拿去，也可以請導師幫你轉交。"));
       }

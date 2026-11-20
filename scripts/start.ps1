@@ -1,6 +1,7 @@
 ﻿# 一鍵啟動（由 start.bat 呼叫）。密碼與金鑰只存在這個視窗的記憶體，不寫入任何檔案。
 # 參數：-Port 5002 改埠號；-NoBrowser 不自動開瀏覽器。已設定的環境變數不會再詢問。
-param([int]$Port = 5000, [switch]$NoBrowser)
+# -Mail：詢問轉介單寄信的設定（展示用收件信箱、寄件 Gmail、應用程式密碼），見 docs/SCHOOL_COUNSELING_DIRECTORY.md。
+param([int]$Port = 5000, [switch]$NoBrowser, [switch]$Mail)
 $ErrorActionPreference = "Stop"
 Set-Location (Split-Path -Parent $PSScriptRoot)
 
@@ -57,12 +58,23 @@ if (-not $env:LLM_PROVIDER) {
     Remove-Variable key
 }
 
+if ($Mail) {
+    if (-not $env:DEMO_COUNSELING_EMAIL) { $env:DEMO_COUNSELING_EMAIL = (Read-Host "展示用收件信箱（直接按 Enter 跳過）").Trim() }
+    if (-not $env:SMTP_USER) { $env:SMTP_USER = (Read-Host "寄件的 Gmail 地址（直接按 Enter 跳過，系統不代寄）").Trim() }
+    if ($env:SMTP_USER -and -not $env:SMTP_PASSWORD) {
+        $env:SMTP_PASSWORD = (Read-Secret "寄件帳號的應用程式密碼（16 個字母，不是登入密碼）") -replace "\s", ""
+    }
+}
+
 $url = "http://127.0.0.1:$Port/"
 $label = if ($Labels.ContainsKey($env:LLM_PROVIDER)) { $Labels[$env:LLM_PROVIDER] } else { $env:LLM_PROVIDER }
 Write-Host ""
 Write-Host "學生頁：$url"
 Write-Host ("後台：  ${url}login" + $(if ($env:WORKBENCH_PASSWORD) { "" } else { "（未設密碼，已停用）" }))
 Write-Host ("模型：  " + $(if ($env:LLM_PROVIDER -eq "builtin") { $label } else { "$label（" + $(if ($env:LLM_MODEL) { "指定 $env:LLM_MODEL" } else { "自動選最佳可用模型，詳見後台" }) + "）" }))
+Write-Host ("寄信：  展示用收件信箱" + $(if ($env:DEMO_COUNSELING_EMAIL) { "已設定" } else { "未設定" }) + "；系統代寄" +
+            $(if ($env:SMTP_USER -and $env:SMTP_PASSWORD) { "已開啟" } else { "未開啟" }) +
+            $(if ($env:DEMO_COUNSELING_EMAIL -or $env:SMTP_USER) { "" } else { "（要開啟請用 .\start.bat -Mail）" }))
 Write-Host "停止伺服器：按 Ctrl+C 或關閉這個視窗" -ForegroundColor Yellow
 Write-Host ""
 

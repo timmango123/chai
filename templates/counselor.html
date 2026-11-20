@@ -10,13 +10,22 @@
 
   <!-- 頂部導航 -->
   <nav class="navbar" style="border-bottom: 2px solid #cbd5e1;">
-    <a href="/counselor" class="nav-brand">
+    <a href="{{ '/showcase' if showcase else '/counselor' }}" class="nav-brand">
       <div class="nav-logo" style="background: #eff6ff;">🧑‍⚕️</div>
       <div class="brand-text">
-        <h1 style="color: #1e3a8a;">安啦會客室 ‧ 授權示範工作臺</h1>
-        <span class="brand-tag" style="background: #dbeafe; color: #1d4ed8;">原型展示，未連接學校或公部門通報</span>
+        <h1 style="color: #1e3a8a;">安啦會客室 ‧ {{ '展示用後台' if showcase else '授權示範工作臺' }}</h1>
+        <span class="brand-tag" style="background: #dbeafe; color: #1d4ed8;">{{ '全部是虛構案例，唯讀，不含任何真實學生資料' if showcase else '原型展示，未連接學校或公部門通報' }}</span>
       </div>
     </a>
+    {% if showcase %}
+    <div class="nav-links">
+      <div class="view-switch" role="group" aria-label="切換學生端與展示後台">
+        <a href="/">💬 學生端</a><a href="/showcase" class="active" aria-current="page">🧑‍⚕️ 展示後台</a>
+      </div>
+      <a href="/resources" class="nav-item">📍 南投資源地圖</a>
+      <a href="/login" class="nav-item">🔐 正式工作臺登入</a>
+    </div>
+    {% else %}
     <div class="nav-links">
       <a href="/" class="nav-item">💬 返回學生端</a>
       <a href="/resources" class="nav-item">📍 南投資源地圖</a>
@@ -30,10 +39,14 @@
         <button type="submit" class="nav-item" style="border:0;cursor:pointer">登出</button>
       </form>
     </div>
+    {% endif %}
   </nav>
 
   <div class="container" style="max-width: 1350px;">
-    
+    {% if showcase %}
+    <p class="showcase-banner" role="note">🎬 展示模式：以下 30 筆都是 <code>data/mock_cases.json</code> 的虛構案例，燈號由系統現場判讀。可以篩選、打開摘要，但不能儲存；真實個案只在登入後的正式工作臺。</p>
+    {% endif %}
+
     <!-- 頂部 KPI 數據卡 -->
     <div class="stat-cards-row">
       <div class="stat-card" style="border-left: 5px solid #ef4444;">
@@ -205,6 +218,7 @@
     </section>
     {% endif %}
 
+    {% if not showcase %}
     <dialog id="passwordDialog" class="install-dialog" aria-labelledby="passwordTitle">
       <form id="passwordForm" class="install-dialog-body">
         <div class="install-dialog-head"><h2 id="passwordTitle">修改我的密碼</h2>
@@ -215,6 +229,7 @@
         <p id="passwordMessage" class="voice-notice" role="status"></p>
       </form>
     </dialog>
+    {% endif %}
 
   </div>
 
@@ -236,7 +251,7 @@
     </p>
   </footer>
 
-  <script>window.ANLA_CSRF_TOKEN = {{ csrf_token|tojson }};</script>
+  <script>window.ANLA_CSRF_TOKEN = {{ csrf_token|tojson }}; window.ANLA_SHOWCASE = {{ showcase|tojson }};</script>
   <script src="{{ asset('js/counselor.js') }}"></script>
   <script src="{{ asset('js/staff.js') }}"></script>
 </body>

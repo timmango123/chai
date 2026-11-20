@@ -3,6 +3,7 @@
 核對過輔導室信箱的學校可以開郵件草稿。
 只用暫存 SQLite 與暫存學校名單，不連網、不寄信。"""
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -25,6 +26,13 @@ SCHOOLS = {"schools": [
     {"name": "不是 https 的高中", "email": "y@gmail.com", "source_url": "http://example.edu.tw", "verified_on": "2026-10-23"},
     {"name": "信箱寫錯的高中", "email": "not-an-email", "source_url": "https://example.edu.tw", "verified_on": "2026-10-23"},
 ]}
+
+
+def without_mail_settings(case):
+    """These tests describe the default (no SMTP, no demo mailbox) whatever the host's own environment holds."""
+    case.enterContext(patch.dict(os.environ))
+    for name in ("SMTP_USER", "SMTP_PASSWORD", "SMTP_HOST", "SMTP_PORT", "SMTP_FROM", "DEMO_COUNSELING_EMAIL"):
+        os.environ.pop(name, None)
 
 
 class DetectionTests(unittest.TestCase):
@@ -63,6 +71,7 @@ class DirectoryTests(unittest.TestCase):
         path = Path(self.enterContext(tempfile.TemporaryDirectory())) / "schools.json"
         path.write_text(json.dumps(SCHOOLS, ensure_ascii=False), encoding="utf-8")
         self.enterContext(patch.object(school_referral, "DATA", str(path)))
+        without_mail_settings(self)
 
     def pick(self, text):
         return school_referral.pick_school(text, county="南投縣")
@@ -124,6 +133,7 @@ class RouteTests(RouteBase):
         path = Path(self.enterContext(tempfile.TemporaryDirectory())) / "schools.json"
         path.write_text(json.dumps(SCHOOLS, ensure_ascii=False), encoding="utf-8")
         self.enterContext(patch.object(school_referral, "DATA", str(path)))
+        without_mail_settings(self)
 
     def chat(self, client, headers, message):
         return client.post("/api/chat", headers=headers, json={"message": message}).json
